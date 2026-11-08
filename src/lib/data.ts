@@ -62,3 +62,8 @@ export async function lastSetsByExercise(exerciseIds: string[]): Promise<Record<
 export async function checkInToday() {
   await supabase().from("checkins").upsert({}, { onConflict: "user_id,checked_on", ignoreDuplicates: true });
 }
+
+export async function getSubscription() {
+  const { data } = await supabase().from("subscriptions").select("*").maybeSingle();
+  return data as import("./pro").Subscription | null;
+}

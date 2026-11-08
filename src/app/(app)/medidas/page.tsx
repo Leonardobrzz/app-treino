@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Body, DEFAULT_LABELS } from "@/components/Body";
 import { LineChart } from "@/components/LineChart";
+import { ProBadge } from "@/components/ProLock";
+import Link from "next/link";
+import { getSubscription } from "@/lib/data";
+import { isPro } from "@/lib/pro";
 import { Button, Card, Empty, Header, Icon, SectionTitle, Segmented, Sheet, Spinner, Stat } from "@/components/ui";
 import { supabase } from "@/lib/supabase/client";
 import { MEASURES, MEASURE_LABEL, type BodyMeasurement, type BodyWeight, type MeasureKey } from "@/lib/types";
@@ -19,6 +23,7 @@ export default function MeasuresPage() {
   const [idx, setIdx] = useState(0);
   const [sel, setSel] = useState<MeasureKey | null>(null);
   const [sheet, setSheet] = useState<Tab | null>(null);
+  const [pro, setPro] = useState(true);
 
   const load = useCallback(async () => {
     const [m, w] = await Promise.all([
@@ -34,6 +39,7 @@ export default function MeasuresPage() {
 
   useEffect(() => {
     load();
+    getSubscription().then((s) => setPro(isPro(s)));
   }, [load]);
 
   // valor de cada medida em cada registro, carregando o último conhecido
@@ -99,7 +105,12 @@ export default function MeasuresPage() {
                       </div>
                     </div>
                     <Body delta={delta} intensity={intensity} selected={sel} labels={labels} onSelect={(k) => { vibrate(8); setSel(k); }} className="w-full max-w-[360px]" />
-                    {records.length > 1 && (
+                    {records.length > 1 && !pro && (
+                      <Link href="/pro" className="press mx-3 flex w-[calc(100%-24px)] items-center justify-center gap-2 rounded-xl bg-card-2 py-3 text-[14px] font-semibold text-accent-ink">
+                        <ProBadge /> Ver a linha do tempo do corpo
+                      </Link>
+                    )}
+                    {records.length > 1 && pro && (
                       <div className="w-full px-3">
                         <input type="range" min={0} max={records.length - 1} step={1} value={idx} onChange={(e) => { setIdx(Number(e.target.value)); vibrate(5); }} aria-label="Escolher registro" className="w-full accent-[var(--accent)]" />
                         <div className="flex justify-between text-[12px] text-label-2">

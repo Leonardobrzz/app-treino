@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, Header, Icon, Segmented, Spinner } from "@/components/ui";
-import { getProfile } from "@/lib/data";
+import { ProBadge } from "@/components/ProLock";
+import { getProfile, getSubscription } from "@/lib/data";
+import { isPro, type Subscription } from "@/lib/pro";
 import { supabase } from "@/lib/supabase/client";
 import { getTheme, setTheme, type Theme } from "@/lib/theme";
 import type { Profile } from "@/lib/types";
@@ -17,10 +19,12 @@ export default function ProfilePage() {
   const [p, setP] = useState<Profile | null>(null);
   const [email, setEmail] = useState("");
   const [theme, setThemeState] = useState<Theme>("system");
+  const [sub, setSub] = useState<Subscription | null>(null);
 
   useEffect(() => {
     setThemeState(getTheme());
     getProfile().then(setP);
+    getSubscription().then(setSub);
     supabase().auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
   }, []);
 
@@ -48,6 +52,17 @@ export default function ProfilePage() {
           <span className="truncate text-[15px] text-label-2">{email}</span>
         </div>
       </div>
+
+      <Link href="/pro" className="press mx-5 mt-6 flex items-center gap-3 rounded-2xl bg-accent-soft p-4">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-on-accent">
+          <Icon name="dumbbell" size={22} stroke={2.4} />
+        </span>
+        <span className="flex flex-1 flex-col">
+          <span className="flex items-center gap-2 text-[16px] font-semibold">Carga <ProBadge /></span>
+          <span className="text-[13px] text-label-2">{isPro(sub) ? (sub?.status === "trialing" ? "Teste grátis ativo" : "Assinatura ativa") : "IA sem limite, gráfico de força e mais"}</span>
+        </span>
+        <Icon name="chevron" size={17} className="text-label-3" />
+      </Link>
 
       <h2 className="px-5 pb-2 pt-7 text-[13px] font-semibold text-label-2">APARÊNCIA</h2>
       <div className="px-5">

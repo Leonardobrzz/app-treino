@@ -63,6 +63,12 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 - [x] Ajusta um dia específico, registra peso e medidas e consulta o histórico de um exercício
 - [x] Entrada por **voz** (Web Speech API, em português)
 
+**Carga Pro (assinatura)**
+- [x] Teste grátis de 7 dias, plano mensal (R$ 14,90) e anual (R$ 99,90) com pagamento pelo **Stripe**
+- [x] Grátis: 5 mensagens por mês com a IA. Pro: IA sem limite, gráfico de força (1RM), evolução do ano inteiro e linha do tempo do corpo
+- [x] Portal do cliente para trocar de plano, atualizar o cartão ou cancelar
+- [x] Webhook do Stripe sincroniza a assinatura com o banco automaticamente
+
 ## Telas
 
 | Login | Hoje | Minha semana | Editar treino |
@@ -129,6 +135,11 @@ O app abre em `http://localhost:3000`.
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Chave publicável do Supabase (pode ficar no front) |
 | `ANTHROPIC_API_KEY` | Chave da API da Anthropic, usada só no servidor |
 | `ANTHROPIC_MODEL` | Modelo do Claude (padrão: `claude-sonnet-5-5`) |
+| `STRIPE_SECRET_KEY` | Chave secreta do Stripe (`sk_test_...` no modo de teste) |
+| `STRIPE_WEBHOOK_SECRET` | Segredo do webhook (`whsec_...`) apontando para `/api/stripe/webhook` |
+| `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_YEARLY` | IDs dos preços do Carga Pro |
+| `SUBSCRIPTION_SYNC_SECRET` | Segredo que autoriza o webhook a gravar a assinatura no banco |
+| `NEXT_PUBLIC_STRIPE_TEST` | `1` para mostrar a dica do cartão de teste na tela do Pro |
 
 ### Configurando o Supabase do zero
 
@@ -136,6 +147,9 @@ O app abre em `http://localhost:3000`.
 2. No **SQL Editor**, rode em ordem os arquivos de `supabase/migrations/`:
    - `20261107000001_schema_inicial.sql` → tabelas, índices, RLS e gatilho de perfil
    - `20261107000002_catalogo_exercicios.sql` → catálogo com os 134 exercícios
+   - `20261108000003_onboarding.sql` → dados do onboarding no perfil
+   - `20261108000004_assinaturas.sql` → assinaturas do Pro (depois, cadastre o segredo em `private.app_secrets`, como explica o arquivo)
+   - `20261108000005_ai_messages_hidden.sql` → histórico da IA
 3. Em **Authentication → URL Configuration**, configure:
    - **Site URL**: a URL do app publicado
    - **Redirect URLs**: `https://SEU-DOMINIO/auth/confirm` e `http://localhost:3000/auth/confirm`
@@ -151,6 +165,7 @@ auth.users ──┬── profiles            nome, objetivo, meta semanal
              ├── body_weights        peso por data
              ├── body_measurements   8 medidas por data
              ├── checkins            presença na academia
+             ├── subscriptions       assinatura do Pro (só o webhook escreve)
              └── ai_messages         histórico do chat com a IA
 ```
 

@@ -24,6 +24,8 @@ export default function AIPage() {
   const [error, setError] = useState("");
   const [listening, setListening] = useState(false);
   const [canSpeak, setCanSpeak] = useState(false);
+  const [usage, setUsage] = useState<{ pro: boolean; used: number; limit: number | null } | null>(null);
+  const [limited, setLimited] = useState(false);
   const recRef = useRef<SpeechRec | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -31,7 +33,13 @@ export default function AIPage() {
   useEffect(() => {
     fetch("/api/ia")
       .then((r) => r.json())
-      .then((d) => setMsgs(d.messages ?? []))
+      .then((d) => {
+        setMsgs(d.messages ?? []);
+        if (d.usage) {
+          setUsage(d.usage);
+          setLimited(!d.usage.pro && d.usage.used >= d.usage.limit);
+        }
+      })
       .catch(() => {});
     const w = window as unknown as { SpeechRecognition?: new () => SpeechRec; webkitSpeechRecognition?: new () => SpeechRec };
     setCanSpeak(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
@@ -56,7 +64,15 @@ export default function AIPage() {
     try {
       const r = await fetch("/api/ia", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: t }) });
       const d = await r.json();
+      if (d.usage) setUsage(d.usage);
+      if (r.status === 402) {
+        setLimited(true);
+        setMsgs((m) => m.slice(0, -1));
+        setInput(t);
+        return;
+      }
       if (!r.ok) throw new Error(d.error);
+      if (d.usage && !d.usage.pro && d.usage.used >= d.usage.limit) setLimited(true);
       setMsgs((m) => [...m, { id: crypto.randomUUID(), role: "assistant", content: d.reply, changed: d.changed }]);
       if (d.changed) vibrate([10, 40, 10]);
     } catch (e) {
@@ -102,7 +118,11 @@ export default function AIPage() {
         title="Assistente"
         eyebrow="IA DE TREINO"
         right={
-          msgs.length > 0 ? (
+          usage && !usage.pro && !msgs.length ? (
+            <Link href="/pro" className="press flex h-9 items-center gap-1.5 rounded-full bg-card px-3 text-[13px] font-semibold text-label-2">
+              <span className="tabular">{Math.max(0, (usage.limit ?? 0) - usage.used)}/{usage.limit}</span> grátis
+            </Link>
+          ) : msgs.length > 0 ? (
             <button onClick={clear} className="press h-9 rounded-full bg-card px-3 text-[14px] font-semibold text-label-2">
               Limpar
             </button>
@@ -151,6 +171,16 @@ export default function AIPage() {
           </motion.div>
         )}
         {error && <p role="alert" className="px-1 text-[15px] text-bad">{error}</p>}
+        {limited && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-2 rounded-2xl bg-card p-5 text-center">
+            <span className="rounded-md bg-accent px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-on-accent">PRO</span>
+            <span className="text-[17px] font-semibold">Você usou as mensagens grátis deste mês</span>
+            <span className="text-[14px] leading-snug text-label-2">Com o Pro, a IA fica sem limite: monta e ajusta seus treinos quantas vezes quiser.</span>
+            <Link href="/pro" className="press mt-1 inline-flex h-11 items-center rounded-xl bg-accent px-5 text-[16px] font-semibold text-on-accent">
+              Testar 7 dias grátis
+            </Link>
+          </motion.div>
+        )}
         <div ref={endRef} />
       </div>
 

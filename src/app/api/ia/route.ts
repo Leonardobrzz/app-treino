@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { MEASURES } from "@/lib/types";
+import { FREE_AI_MESSAGES, isPro } from "@/lib/pro";
 import { WEEKDAYS } from "@/lib/util";
 
 type SB = Awaited<ReturnType<typeof supabaseServer>>;
@@ -179,19 +180,30 @@ async function runTool(sb: SB, userId: string, catalog: Ex[], name: string, inpu
   return "Ferramenta desconhecida.";
 }
 
+async function usage(sb: SB) {
+  const { data: sub } = await sb.from("subscriptions").select("status").maybeSingle();
+  const pro = isPro(sub);
+  const start = new Date();
+  start.setDate(1);
+  start.setHours(0, 0, 0, 0);
+  const { count } = await sb.from("ai_messages").select("id", { count: "exact", head: true }).eq("role", "user").gte("created_at", start.toISOString());
+  return { pro, used: count ?? 0, limit: pro ? null : FREE_AI_MESSAGES };
+}
+
 export async function GET() {
   const sb = await supabaseServer();
   const { data: u } = await sb.auth.getUser();
   if (!u.user) return NextResponse.json({ error: "não autenticado" }, { status: 401 });
-  const { data } = await sb.from("ai_messages").select("id,role,content,created_at").order("created_at").limit(100);
-  return NextResponse.json({ messages: data ?? [] });
+  const { data } = await sb.from("ai_messages").select("id,role,content,created_at").eq("hidden", false).order("created_at").limit(100);
+  return NextResponse.json({ messages: data ?? [], usage: await usage(sb) });
 }
 
 export async function DELETE() {
   const sb = await supabaseServer();
   const { data: u } = await sb.auth.getUser();
   if (!u.user) return NextResponse.json({ error: "não autenticado" }, { status: 401 });
-  await sb.from("ai_messages").delete().eq("user_id", u.user.id);
+  // esconde em vez de apagar: o histórico some, mas a contagem do plano grátis continua valendo
+  await sb.from("ai_messages").update({ hidden: true }).eq("user_id", u.user.id);
   return NextResponse.json({ ok: true });
 }
 
@@ -201,6 +213,11 @@ export async function POST(req: NextRequest) {
   if (!u.user) return NextResponse.json({ error: "não autenticado" }, { status: 401 });
   if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: "A IA ainda não foi configurada (falta ANTHROPIC_API_KEY)." }, { status: 503 });
 
+  const u0 = await usage(sb);
+  if (!u0.pro && u0.used >= FREE_AI_MESSAGES) {
+    return NextResponse.json({ error: `Você usou as ${FREE_AI_MESSAGES} mensagens grátis deste mês.`, limit: true, usage: u0 }, { status: 402 });
+  }
+
   const { message } = (await req.json()) as { message?: string };
   const text = (message ?? "").trim().slice(0, 2000);
   if (!text) return NextResponse.json({ error: "mensagem vazia" }, { status: 400 });
@@ -208,7 +225,7 @@ export async function POST(req: NextRequest) {
   const [profile, plan, hist, catalogRes, weight] = await Promise.all([
     sb.from("profiles").select("name,goal,weekly_goal,level,location,priority_muscles,session_minutes,height_cm,sex").eq("id", u.user.id).maybeSingle(),
     activePlan(sb),
-    sb.from("ai_messages").select("role,content").order("created_at", { ascending: false }).limit(16),
+    sb.from("ai_messages").select("role,content").eq("hidden", false).order("created_at", { ascending: false }).limit(16),
     sb.from("exercises").select("id,name,muscle_group,equipment"),
     sb.from("body_weights").select("measured_on,weight").order("measured_on", { ascending: false }).limit(3),
   ]);
@@ -282,5 +299,5 @@ Regras:
     { role: "user", content: text },
     { role: "assistant", content: reply },
   ]);
-  return NextResponse.json({ reply, changed });
+  return NextResponse.json({ reply, changed, usage: { ...u0, used: u0.used + 1 } });
 }

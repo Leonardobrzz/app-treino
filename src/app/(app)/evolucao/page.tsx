@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { LineChart } from "@/components/LineChart";
+import { ProLock } from "@/components/ProLock";
+import { getSubscription } from "@/lib/data";
+import { isPro } from "@/lib/pro";
 import { Card, Empty, Header, Icon, LinkButton, SectionTitle, Segmented, Spinner, Stat } from "@/components/ui";
 import { supabase } from "@/lib/supabase/client";
 import { epley, fmtDate, num } from "@/lib/util";
@@ -19,8 +22,10 @@ export default function EvolutionPage() {
   const [sets, setSets] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [exercise, setExercise] = useState<string>("");
+  const [pro, setPro] = useState(true);
 
   useEffect(() => {
+    getSubscription().then((s) => setPro(isPro(s)));
     (async () => {
       const since = new Date();
       since.setDate(since.getDate() - 730);
@@ -95,12 +100,14 @@ export default function EvolutionPage() {
         <Spinner />
       ) : (
         <>
+          <ProLock locked={!pro && period === "ano"} title="Evolução do ano inteiro" text="Veja volume, treinos e recordes dos últimos 12 meses com o Pro.">
           <motion.div key={period} initial={{ opacity: 0.4, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 400, damping: 30 }} className="grid grid-cols-2 gap-3 px-5 pt-4">
             <Stat label="Volume" value={stats.volume >= 10000 ? num(stats.volume / 1000, 1) : num(stats.volume, 0)} unit={stats.volume >= 10000 ? "t" : "kg"} foot={stats.volDelta == null ? "Peso × repetições" : `${stats.volDelta >= 0 ? "+" : "−"}${Math.abs(stats.volDelta)}% vs. anterior`} footTone={stats.volDelta != null && stats.volDelta >= 0 ? "good" : "muted"} />
             <Stat label="Treinos" value={String(stats.count)} foot={`${stats.prevCount} no período anterior`} />
             <Stat label="Recordes" value={String(stats.prs.length)} foot="Novos neste período" footTone={stats.prs.length ? "good" : "muted"} />
             <Stat label="Tempo médio" value={stats.minutes ? String(stats.minutes) : "–"} unit="min" foot="Por treino" />
           </motion.div>
+          </ProLock>
 
           <Link href="/medidas" className="press mx-5 mt-3 flex items-center gap-3 rounded-2xl bg-card p-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
@@ -119,7 +126,9 @@ export default function EvolutionPage() {
             </div>
           ) : (
             <>
-              <Card className="mx-5 mt-3 flex flex-col gap-2 rounded-[20px] p-4">
+              <div className="mx-5 mt-3">
+              <ProLock locked={!pro} title="Gráfico de força" text="Acompanhe o 1RM estimado de cada exercício ao longo do tempo.">
+              <Card className="flex flex-col gap-2 rounded-[20px] p-4">
                 <span className="text-[13px] font-semibold text-label-2">1RM ESTIMADO</span>
                 <select value={exId} onChange={(e) => setExercise(e.target.value)} aria-label="Exercício" className="-ml-1 bg-transparent text-[17px] font-semibold outline-none">
                   {exerciseOptions.map(([id, o]) => <option key={id} value={id}>{o.name}</option>)}
@@ -130,6 +139,8 @@ export default function EvolutionPage() {
                   <p className="py-6 text-center text-[15px] text-label-2">Faça esse exercício mais uma vez para ver a curva.</p>
                 )}
               </Card>
+              </ProLock>
+              </div>
 
               <SectionTitle>Recordes</SectionTitle>
               {stats.prs.length ? (

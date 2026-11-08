@@ -15,7 +15,8 @@
     "motion": "^14.10.1",
     "next": "16.4.5",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "stripe": "^23.1.0"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
