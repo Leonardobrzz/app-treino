@@ -1,61 +1,218 @@
-# Carga — app de treino
+# Carga 🏋️ — App de treino
 
-App web (PWA) para registrar treinos, acompanhar a progressão de carga, medidas e peso, com uma IA embutida que monta a semana de treinos por texto ou voz. Visual inspirado nas diretrizes da Apple, com tema claro, escuro ou automático.
+> Aplicativo web (PWA) para organizar a semana de treinos, registrar as séries na academia, acompanhar a progressão de carga e a evolução do corpo, com um assistente de IA que monta o treino a partir de um pedido em texto ou voz.
 
-## O que tem
+![Telas do app](docs/screenshots/capa.png)
 
-- **Conta**: cadastro, login, "esqueci a senha" por e-mail e criação de senha nova.
-- **Hoje**: treino do dia, sequência de semanas, meta semanal, check-in e sugestões de carga.
-- **Minha semana**: cada pessoa monta os próprios dias com exercícios, séries, repetições, carga, descanso e notas.
-- **Biblioteca**: 134 exercícios em português, com busca e filtro por músculo. Também dá pra criar exercícios próprios.
-- **Treino ao vivo**: séries já preenchidas com a carga sugerida, timer de descanso com vibração, calculadora de anilhas e resumo com recordes ao finalizar.
-- **Progressão automática** (dupla progressão): quando todas as séries batem o topo da faixa de repetições, o app sugere subir a carga.
-- **Evolução**: volume, treinos, recordes, 1RM estimado por exercício (Epley) e séries por músculo.
-- **Peso e medidas**: registros em qualquer data, gráfico de peso mês a mês e um corpo anatômico que muda de cor e de forma conforme as medidas evoluem.
-- **IA (Claude)**: monta ou ajusta a semana, registra peso e medidas e tira dúvidas. Aceita voz no navegador quando há suporte.
+## Sumário
 
-## Stack
+- [Sobre o projeto](#sobre-o-projeto)
+- [Funcionalidades](#funcionalidades)
+- [Telas](#telas)
+- [Tecnologias](#tecnologias)
+- [Como rodar](#como-rodar)
+- [Banco de dados](#banco-de-dados)
+- [Como funciona a progressão de carga](#como-funciona-a-progressão-de-carga)
+- [Estrutura de pastas](#estrutura-de-pastas)
+- [Próximos passos](#próximos-passos)
+- [Autor](#autor)
 
-Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · Motion · Supabase (Auth + Postgres com RLS) · Claude API (`@anthropic-ai/sdk`).
+---
 
-## Rodando
+## Sobre o projeto
+
+A maioria dos apps de academia que eu testei ou é cheia de anúncio, ou não deixa montar o treino do jeito que eu faço, ou não mostra direito se eu estou evoluindo. Então resolvi fazer o meu.
+
+A ideia do **Carga** é ser simples de usar no meio do treino (um toque para marcar a série, o timer de descanso começa sozinho) e, ao mesmo tempo, dar uma visão clara da evolução: quanto a carga subiu, quais recordes foram batidos e como as medidas do corpo mudaram ao longo dos meses.
+
+O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fundo neutro, uma única cor de destaque (laranja) e animações com efeito de mola. Tem tema **claro**, **escuro** e **automático**.
+
+## Funcionalidades
+
+**Conta**
+- [x] Cadastro com nome, e-mail e senha
+- [x] Login
+- [x] "Esqueci minha senha" com link por e-mail e tela para criar uma senha nova
+
+**Treinos**
+- [x] Montar a própria semana: escolher o dia, dar nome ao treino e adicionar exercícios
+- [x] Configurar séries, repetições (ex.: `8-12`), carga, descanso e uma nota por exercício
+- [x] Biblioteca com **134 exercícios** em português, com busca e filtro por grupo muscular
+- [x] Criar exercícios próprios quando não estão na lista
+- [x] Reordenar e remover exercícios
+
+**Treino ao vivo**
+- [x] Séries já preenchidas com a carga sugerida e o que foi feito no treino anterior
+- [x] Timer de descanso automático com vibração ao terminar (−15 s / +15 s / pular)
+- [x] Calculadora de anilhas para exercícios com barra
+- [x] Resumo no final com volume, séries, tempo e **recordes batidos**
+- [x] Dá para sair e continuar o treino depois sem perder o que foi marcado
+
+**Acompanhamento**
+- [x] Check-in na academia, sequência de semanas e meta semanal
+- [x] Sugestão automática de aumento de carga
+- [x] Evolução por semana, mês e ano: volume, treinos, recordes e tempo médio
+- [x] Gráfico do **1RM estimado** por exercício
+- [x] Séries por grupo muscular na semana, com aviso quando está abaixo do ideal
+- [x] Registro de **peso** em qualquer data (dá para lançar meses antigos) e histórico mês a mês
+- [x] Registro de **medidas** com um **mapa muscular anatômico** que muda de cor e de tamanho conforme a evolução
+
+**Assistente de IA**
+- [x] Chat com o Claude (Anthropic) para tirar dúvidas de treino
+- [x] Monta a semana inteira a partir de um pedido como *"treino ABC, 4x por semana, foco em pernas"* e salva no app
+- [x] Ajusta um dia específico, registra peso e medidas e consulta o histórico de um exercício
+- [x] Entrada por **voz** (Web Speech API, em português)
+
+## Telas
+
+| Login | Hoje | Minha semana | Editar treino |
+|:---:|:---:|:---:|:---:|
+| ![](docs/screenshots/login-light.png) | ![](docs/screenshots/hoje-light.png) | ![](docs/screenshots/semana-light.png) | ![](docs/screenshots/editar-dia-light.png) |
+
+| Treino ao vivo | Calculadora de anilhas | Evolução | Perfil |
+|:---:|:---:|:---:|:---:|
+| ![](docs/screenshots/treino-ao-vivo-light.png) | ![](docs/screenshots/anilhas-light.png) | ![](docs/screenshots/evolucao-light.png) | ![](docs/screenshots/perfil-light.png) |
+
+| Medidas | Peso | Assistente de IA |
+|:---:|:---:|:---:|
+| ![](docs/screenshots/medidas-light.png) | ![](docs/screenshots/peso-light.png) | ![](docs/screenshots/ia-light.png) |
+
+### Tema escuro
+
+| Hoje | Treino ao vivo | Evolução | Medidas |
+|:---:|:---:|:---:|:---:|
+| ![](docs/screenshots/hoje-dark.png) | ![](docs/screenshots/treino-ao-vivo-dark.png) | ![](docs/screenshots/evolucao-dark.png) | ![](docs/screenshots/medidas-dark.png) |
+
+## Tecnologias
+
+| Camada | Tecnologia |
+| --- | --- |
+| Front-end | [Next.js 16](https://nextjs.org/) (App Router), React 19, TypeScript |
+| Estilo | Tailwind CSS 4 com variáveis de tema (claro e escuro) |
+| Animações | [Motion](https://motion.dev/) (antigo Framer Motion) |
+| Back-end | [Supabase](https://supabase.com/): autenticação e PostgreSQL com Row Level Security |
+| IA | [Claude API](https://docs.claude.com/) com *tool use* para gravar no banco |
+| Gráficos e corpo | SVG feito à mão (sem biblioteca) |
+
+## Como rodar
+
+### Pré-requisitos
+
+- Node.js 20.9 ou superior
+- Uma conta no [Supabase](https://supabase.com/) (o plano grátis basta)
+- Uma chave da [API da Anthropic](https://console.anthropic.com/) (só para o assistente de IA)
+
+### Passo a passo
 
 ```bash
+# 1. clonar o repositório
+git clone https://github.com/Leonardobrzz/app-treino.git
+cd app-treino
+
+# 2. instalar as dependências
 npm install
-cp .env.example .env.local   # preencha ANTHROPIC_API_KEY
+
+# 3. criar o arquivo de variáveis
+cp .env.example .env.local      # no Windows: copy .env.example .env.local
+
+# 4. rodar
 npm run dev
 ```
 
-### Variáveis
+O app abre em `http://localhost:3000`.
 
-| Variável | O que é |
+### Variáveis de ambiente
+
+| Variável | Descrição |
 | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Chave publicável (pode ficar no front) |
-| `ANTHROPIC_API_KEY` | Chave da API da Anthropic, usada só no servidor (`/api/ia`) |
-| `ANTHROPIC_MODEL` | Modelo do Claude (padrão `claude-sonnet-5-5`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto no Supabase |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Chave publicável do Supabase (pode ficar no front) |
+| `ANTHROPIC_API_KEY` | Chave da API da Anthropic, usada só no servidor |
+| `ANTHROPIC_MODEL` | Modelo do Claude (padrão: `claude-sonnet-5-5`) |
 
-### Banco
+### Configurando o Supabase do zero
 
-As migrações estão em `supabase/migrations/`. Num projeto novo, rode as duas no SQL Editor, em ordem, ou use `supabase db push`.
+1. Crie um projeto no Supabase.
+2. No **SQL Editor**, rode em ordem os arquivos de `supabase/migrations/`:
+   - `20261107000001_schema_inicial.sql` → tabelas, índices, RLS e gatilho de perfil
+   - `20261107000002_catalogo_exercicios.sql` → catálogo com os 134 exercícios
+3. Em **Authentication → URL Configuration**, configure:
+   - **Site URL**: a URL do app publicado
+   - **Redirect URLs**: `https://SEU-DOMINIO/auth/confirm` e `http://localhost:3000/auth/confirm`
 
-### Supabase Auth (obrigatório para os e-mails funcionarem)
+> ⚠️ O envio de e-mail padrão do Supabase tem um limite baixo por hora. Para produção, configure um SMTP próprio em **Authentication → SMTP**.
 
-Em **Authentication → URL Configuration**:
-- **Site URL**: a URL onde o app está publicado (ex.: `https://carga.vercel.app`)
-- **Redirect URLs**: `https://SEU-DOMINIO/auth/confirm` e `http://localhost:3000/auth/confirm`
+## Banco de dados
 
-O SMTP padrão do Supabase envia poucos e-mails por hora. Para produção, configure um SMTP próprio (Resend, por exemplo) em **Authentication → SMTP**.
+```
+auth.users ──┬── profiles            nome, objetivo, meta semanal
+             ├── plans ── plan_days ── plan_exercises ── exercises
+             ├── sessions ── session_sets ───────────────┘
+             ├── body_weights        peso por data
+             ├── body_measurements   8 medidas por data
+             ├── checkins            presença na academia
+             └── ai_messages         histórico do chat com a IA
+```
 
-## Estrutura
+- **exercises**: catálogo global (`created_by = null`) + exercícios criados pelo usuário
+- **plans / plan_days / plan_exercises**: a semana de treino (dia da semana → exercícios com séries, reps, carga e descanso)
+- **sessions / session_sets**: cada treino realizado e cada série marcada
+
+Todas as tabelas usam **Row Level Security**: cada usuário só consegue ler e alterar os próprios dados, mesmo usando a chave pública direto no navegador.
+
+## Como funciona a progressão de carga
+
+Usei a **dupla progressão**, um método comum em academia:
+
+1. Cada exercício tem uma faixa de repetições, por exemplo `8-12`.
+2. Se no último treino **todas as séries** chegaram no topo da faixa (12 reps), o app sugere **aumentar a carga** e voltar para a base da faixa (8 reps).
+3. Se não chegou, mantém a carga e sugere tentar 1 repetição a mais.
+
+O incremento depende do equipamento: +1 ou +2 kg em halteres, +2,5 kg na maioria dos exercícios e +5 kg em cargas acima de 100 kg (leg press, por exemplo).
+
+Para comparar força entre treinos com repetições diferentes, o app calcula o **1RM estimado** pela fórmula de Epley:
+
+```
+1RM = carga × (1 + repetições / 30)
+```
+
+É esse valor que aparece no gráfico de evolução e que decide se uma série foi recorde.
+
+## Estrutura de pastas
 
 ```
 src/
-  app/(auth)/        login, cadastro, esqueci-senha, nova-senha
-  app/(app)/         telas com barra inferior: hoje, treinos, ia, evolucao, medidas, perfil
-  app/(focus)/       treino ao vivo, em tela cheia
-  app/api/ia/        rota do Claude, com ferramentas que gravam no banco
-  components/        UI, corpo anatômico, gráfico, seletor de exercícios
-  lib/               Supabase, tipos, progressão de carga, tema
-supabase/migrations/ schema, RLS e catálogo de exercícios
+├── app/
+│   ├── (auth)/            login, cadastro, esqueci-senha, nova-senha
+│   ├── (app)/             telas com barra inferior
+│   │   ├── page.tsx       Hoje
+│   │   ├── treinos/       minha semana + edição de cada dia
+│   │   ├── exercicios/    biblioteca
+│   │   ├── evolucao/      estatísticas e gráficos
+│   │   ├── medidas/       peso, medidas e corpo anatômico
+│   │   ├── ia/            chat com o assistente
+│   │   └── perfil/        meta, objetivo, tema e sair
+│   ├── (focus)/treino/    treino ao vivo (tela cheia)
+│   ├── api/ia/            rota que conversa com o Claude
+│   └── auth/confirm/      retorno dos links de e-mail
+├── components/            UI, corpo anatômico (Body), gráfico (LineChart), seletor de exercícios
+├── lib/                   cliente Supabase, tipos, lógica de progressão, tema
+└── proxy.ts               protege as rotas e renova a sessão
+supabase/migrations/       SQL do banco
+docs/screenshots/          prints usados neste README
 ```
+
+## Próximos passos
+
+- [ ] Vista de costas no mapa muscular (dorsal, glúteo, posterior de coxa)
+- [ ] Fotos de progresso com comparação lado a lado
+- [ ] Check-in automático por localização da academia
+- [ ] Modo offline (salvar o treino sem internet e sincronizar depois)
+- [ ] Notificação quando o descanso termina com a tela bloqueada
+- [ ] Versão nativa com React Native / Expo
+
+## Autor
+
+Feito por **Leonardo Alves Braz**, engenheiro da computação e dev full stack.
+
+[![GitHub](https://img.shields.io/badge/GitHub-Leonardobrzz-181717?logo=github)](https://github.com/Leonardobrzz)
