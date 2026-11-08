@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
   if (!text) return NextResponse.json({ error: "mensagem vazia" }, { status: 400 });
 
   const [profile, plan, hist, catalogRes, weight] = await Promise.all([
-    sb.from("profiles").select("name,goal,weekly_goal").eq("id", u.user.id).maybeSingle(),
+    sb.from("profiles").select("name,goal,weekly_goal,level,location,priority_muscles,session_minutes,height_cm,sex").eq("id", u.user.id).maybeSingle(),
     activePlan(sb),
     sb.from("ai_messages").select("role,content").order("created_at", { ascending: false }).limit(16),
     sb.from("exercises").select("id,name,muscle_group,equipment"),
@@ -228,7 +228,7 @@ export async function POST(req: NextRequest) {
 
 Hoje é ${new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "America/Sao_Paulo" })}.
 
-Usuário: ${profile.data?.name ?? "sem nome"} · objetivo: ${profile.data?.goal ?? "não informado"} · meta: ${profile.data?.weekly_goal ?? 4} treinos/semana.
+Usuário: ${profile.data?.name ?? "sem nome"} · objetivo: ${profile.data?.goal ?? "não informado"} · meta: ${profile.data?.weekly_goal ?? 4} treinos/semana · nível: ${profile.data?.level ?? "?"} · treina em: ${profile.data?.location ?? "?"} · tempo por treino: ${profile.data?.session_minutes ?? "?"} min · músculos prioritários: ${(profile.data?.priority_muscles ?? []).join(", ") || "nenhum"}${profile.data?.height_cm ? ` · altura: ${profile.data.height_cm} cm` : ""}.
 Peso recente: ${(weight.data ?? []).map((w) => `${w.weight} kg em ${w.measured_on}`).join(", ") || "não registrado"}.
 
 Plano atual:

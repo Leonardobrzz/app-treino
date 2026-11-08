@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Card, Empty, Icon, LinkButton, SectionTitle, Spinner } from "@/components/ui";
@@ -10,6 +11,7 @@ import type { Profile, SessionSet } from "@/lib/types";
 import { WEEKDAYS, WEEKDAYS_LETTER, longToday, num, suggest, todayISO, vibrate, weekStart, weekStreak } from "@/lib/util";
 
 export default function TodayPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [plan, setPlan] = useState<ActivePlan | null>(null);
@@ -29,6 +31,10 @@ export default function TodayPage() {
         supabase().from("sessions").select("started_at").not("finished_at", "is", null).gte("started_at", since.toISOString()),
         supabase().from("checkins").select("checked_on").gte("checked_on", todayISO(weekStart(new Date()))),
       ]);
+      if (p && !p.onboarded_at) {
+        router.replace("/bem-vindo");
+        return;
+      }
       setProfile(p);
       setPlan(pl);
       setSessionDates((ses.data ?? []).map((s: { started_at: string }) => s.started_at));

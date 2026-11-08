@@ -10,7 +10,7 @@ import { getTheme, setTheme, type Theme } from "@/lib/theme";
 import type { Profile } from "@/lib/types";
 import { vibrate } from "@/lib/util";
 
-const GOALS = ["Hipertrofia", "Força", "Emagrecimento", "Condicionamento"];
+const GOALS = ["Perder gordura", "Manter e cuidar", "Ganhar massa", "Recomposição"];
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -92,6 +92,7 @@ export default function ProfilePage() {
           { href: "/medidas", icon: "ruler" as const, label: "Peso e medidas" },
           { href: "/exercicios", icon: "dumbbell" as const, label: "Biblioteca de exercícios" },
           { href: "/ia", icon: "spark" as const, label: "Assistente de treino" },
+          { href: "/bem-vindo", icon: "refresh" as const, label: "Refazer configuração inicial" },
         ].map((l) => (
           <Link key={l.href} href={l.href} className="press flex items-center gap-3 border-b border-sep px-4 py-3 last:border-b-0">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent-ink">

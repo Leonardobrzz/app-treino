@@ -60,4 +60,21 @@ export const MEASURE_LABEL: Record<MeasureKey, string> = {
   pescoco: "Pescoço",
 };
 
-export type Profile = { id: string; name: string | null; goal: string | null; weekly_goal: number };
+export type Profile = {
+  id: string;
+  name: string | null;
+  goal: string | null;
+  weekly_goal: number;
+  sex: "masculino" | "feminino" | "outro" | null;
+  body_type: number | null;
+  birth_date: string | null;
+  height_cm: number | null;
+  target_weight: number | null;
+  pace: "lento" | "moderado" | "rapido" | null;
+  level: "iniciante" | "intermediario" | "avancado" | null;
+  priority_muscles: string[];
+  training_days: number[];
+  location: "academia" | "casa" | "corpo" | null;
+  session_minutes: number | null;
+  onboarded_at: string | null;
+};
