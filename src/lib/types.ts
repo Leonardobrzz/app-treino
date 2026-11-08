@@ -77,4 +77,29 @@ export type Profile = {
   location: "academia" | "casa" | "corpo" | null;
   session_minutes: number | null;
   onboarded_at: string | null;
+  kcal_target: number | null;
+  protein_target: number | null;
+  carbs_target: number | null;
+  fat_target: number | null;
+  water_target_ml: number | null;
 };
+
+export const MEAL_TYPES = ["cafe", "almoco", "lanche", "jantar"] as const;
+export type MealType = (typeof MEAL_TYPES)[number];
+export const MEAL_LABEL: Record<MealType, string> = { cafe: "Café da manhã", almoco: "Almoço", lanche: "Lanche", jantar: "Jantar" };
+
+export type Meal = {
+  id: string;
+  eaten_on: string;
+  meal: MealType;
+  name: string;
+  portion: string | null;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  source: "manual" | "foto" | "texto" | "chat" | "recente";
+  created_at: string;
+};
+
+export type WaterLog = { id: string; logged_on: string; ml: number; created_at: string };

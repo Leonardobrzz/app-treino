@@ -8,6 +8,7 @@ import { Card, Empty, Icon, LinkButton, SectionTitle, Spinner } from "@/componen
 import { checkInToday, getActivePlan, getProfile, lastSetsByExercise, type ActivePlan } from "@/lib/data";
 import { supabase } from "@/lib/supabase/client";
 import type { Profile, SessionSet } from "@/lib/types";
+import { computeTargets } from "@/lib/nutrition";
 import { WEEKDAYS, WEEKDAYS_LETTER, longToday, num, suggest, todayISO, vibrate, weekStart, weekStreak } from "@/lib/util";
 
 export default function TodayPage() {
@@ -19,17 +20,21 @@ export default function TodayPage() {
   const [checkins, setCheckins] = useState<string[]>([]);
   const [last, setLast] = useState<Record<string, SessionSet[]>>({});
   const [dateLabel, setDateLabel] = useState("");
+  const [food, setFood] = useState<{ kcal: number; water: number; weight: number | null }>({ kcal: 0, water: 0, weight: null });
 
   useEffect(() => {
     setDateLabel(longToday());
     (async () => {
       const since = new Date();
       since.setDate(since.getDate() - 7 * 60);
-      const [p, pl, ses, ci] = await Promise.all([
+      const [p, pl, ses, ci, ml, wa, bw] = await Promise.all([
         getProfile(),
         getActivePlan(),
         supabase().from("sessions").select("started_at").not("finished_at", "is", null).gte("started_at", since.toISOString()),
         supabase().from("checkins").select("checked_on").gte("checked_on", todayISO(weekStart(new Date()))),
+        supabase().from("meals").select("kcal").eq("eaten_on", todayISO()),
+        supabase().from("water_logs").select("ml").eq("logged_on", todayISO()),
+        supabase().from("body_weights").select("weight").order("measured_on", { ascending: false }).limit(1).maybeSingle(),
       ]);
       if (p && !p.onboarded_at) {
         router.replace("/bem-vindo");
@@ -39,6 +44,11 @@ export default function TodayPage() {
       setPlan(pl);
       setSessionDates((ses.data ?? []).map((s: { started_at: string }) => s.started_at));
       setCheckins((ci.data ?? []).map((c: { checked_on: string }) => c.checked_on));
+      setFood({
+        kcal: (ml.data ?? []).reduce((a: number, m: { kcal: number }) => a + Number(m.kcal), 0),
+        water: (wa.data ?? []).reduce((a: number, w: { ml: number }) => a + w.ml, 0),
+        weight: bw.data?.weight ?? null,
+      });
       const today = pl?.plan_days.find((d) => d.weekday === new Date().getDay());
       if (today) setLast(await lastSetsByExercise(today.plan_exercises.map((e) => e.exercise_id)));
       setLoading(false);
@@ -63,6 +73,7 @@ export default function TodayPage() {
   const todayDay = plan?.plan_days.find((d) => d.weekday === new Date().getDay());
   const nextDay = plan?.plan_days.find((d) => d.weekday > new Date().getDay()) ?? plan?.plan_days[0];
   const checkedToday = checkins.includes(todayISO());
+  const nt = computeTargets(profile, food.weight);
 
   const suggestions = (todayDay?.plan_exercises ?? [])
     .map((pe) => ({ pe, s: suggest(last[pe.exercise_id] ?? [], pe.reps, pe.sets, pe.exercises.equipment) }))
@@ -214,7 +225,26 @@ export default function TodayPage() {
             </Card>
           )}
 
-          <div className="mx-5 mt-4 grid grid-cols-2 gap-3">
+          <Link href="/nutricao" className="press mx-5 mt-4 flex items-center gap-4 rounded-2xl bg-card p-4">
+            <div className="relative h-14 w-14 shrink-0">
+              <svg viewBox="0 0 56 56" className="h-14 w-14 -rotate-90" aria-hidden="true">
+                <circle cx="28" cy="28" r="23" fill="none" stroke="var(--fill)" strokeWidth="6" />
+                <motion.circle cx="28" cy="28" r="23" fill="none" stroke="var(--accent)" strokeWidth="6" strokeLinecap="round" strokeDasharray={2 * Math.PI * 23} initial={{ strokeDashoffset: 2 * Math.PI * 23 }} animate={{ strokeDashoffset: 2 * Math.PI * 23 * (1 - Math.min(1, food.kcal / nt.kcal)) }} transition={{ type: "spring", stiffness: 70, damping: 18, delay: 0.2 }} />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-accent-ink">
+                <Icon name="apple" size={22} />
+              </span>
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-[15px] font-semibold">Nutrição</span>
+              <span className="tabular text-[14px] text-label-2">
+                <b className="text-label">{Math.round(food.kcal).toLocaleString("pt-BR")}</b> de {nt.kcal.toLocaleString("pt-BR")} kcal · água {num(food.water / 1000, 2)} de {num(nt.water / 1000, 2)} L
+              </span>
+            </div>
+            <Icon name="chevron" size={18} className="text-label-3" />
+          </Link>
+
+          <div className="mx-5 mt-3 grid grid-cols-2 gap-3">
             <button onClick={doCheckIn} disabled={checkedToday} className="press flex flex-col items-start gap-2 rounded-2xl bg-card p-4 text-left disabled:opacity-100">
               <div className={`flex h-9 w-9 items-center justify-center rounded-[10px] ${checkedToday ? "bg-good-soft text-good" : "bg-accent-soft text-accent-ink"}`}>
                 <Icon name={checkedToday ? "check" : "pin"} size={20} stroke={checkedToday ? 3 : 2} />

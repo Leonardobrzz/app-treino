@@ -4,6 +4,8 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { MEASURES } from "@/lib/types";
 import { FREE_AI_MESSAGES, isPro } from "@/lib/pro";
 import { WEEKDAYS } from "@/lib/util";
+import { ITEM_SCHEMA, cleanItem, computeTargets, mealForHour } from "@/lib/nutrition";
+import { MEAL_LABEL, MEAL_TYPES, type MealType } from "@/lib/types";
 
 type SB = Awaited<ReturnType<typeof supabaseServer>>;
 type Ex = { id: string; name: string; muscle_group: string; equipment: string };
@@ -91,6 +93,19 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "registrar_refeicao",
+    description: "Registra no diário alimentar o que o usuário comeu, com porção e macros estimados por item. Use quando ele contar o que comeu ou bebeu.",
+    input_schema: {
+      type: "object",
+      properties: {
+        refeicao: { type: "string", enum: [...MEAL_TYPES], description: "cafe, almoco, lanche ou jantar" },
+        data: { type: "string", description: "AAAA-MM-DD (padrão hoje)" },
+        itens: { type: "array", items: ITEM_SCHEMA },
+      },
+      required: ["refeicao", "itens"],
+    },
+  },
+  {
     name: "historico_exercicio",
     description: "Mostra as últimas sessões de um exercício (cargas e repetições) para orientar a progressão.",
     input_schema: { type: "object", properties: { nome: { type: "string" } }, required: ["nome"] },
@@ -165,6 +180,16 @@ async function runTool(sb: SB, userId: string, catalog: Ex[], name: string, inpu
     const { error } = await sb.from("body_measurements").upsert(row, { onConflict: "user_id,measured_on" });
     return error ? "Erro ao salvar as medidas." : "Medidas registradas.";
   }
+  if (name === "registrar_refeicao") {
+    const meal = (MEAL_TYPES as readonly string[]).includes(String(input.refeicao)) ? (input.refeicao as MealType) : mealForHour(hourBR());
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(String(input.data ?? "")) ? String(input.data) : todayBR();
+    const items = ((input.itens as Record<string, unknown>[]) ?? []).map(cleanItem).filter((x) => x !== null).slice(0, 20);
+    if (!items.length) return "Nenhum alimento válido para registrar.";
+    const { error } = await sb.from("meals").insert(items.map((it) => ({ ...it, portion: it.portion || null, meal, eaten_on: day, source: "chat" })));
+    if (error) return "Erro ao salvar a refeição.";
+    const tot = items.reduce((a, b) => a + b.kcal, 0);
+    return `Registrado em ${MEAL_LABEL[meal]} (${day}): ${items.map((i) => i.name).join(", ")} — ${Math.round(tot)} kcal.`;
+  }
   if (name === "historico_exercicio") {
     const ex = catalog.find((e) => norm(e.name).includes(norm(String(input.nome))));
     if (!ex) return "Exercício não encontrado.";
@@ -179,6 +204,9 @@ async function runTool(sb: SB, userId: string, catalog: Ex[], name: string, inpu
   }
   return "Ferramenta desconhecida.";
 }
+
+const todayBR = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+const hourBR = () => Number(new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: "America/Sao_Paulo" })) % 24;
 
 async function usage(sb: SB) {
   const { data: sub } = await sb.from("subscriptions").select("status").maybeSingle();
@@ -222,13 +250,18 @@ export async function POST(req: NextRequest) {
   const text = (message ?? "").trim().slice(0, 2000);
   if (!text) return NextResponse.json({ error: "mensagem vazia" }, { status: 400 });
 
-  const [profile, plan, hist, catalogRes, weight] = await Promise.all([
-    sb.from("profiles").select("name,goal,weekly_goal,level,location,priority_muscles,session_minutes,height_cm,sex").eq("id", u.user.id).maybeSingle(),
+  const [profile, plan, hist, catalogRes, weight, mealsToday] = await Promise.all([
+    sb.from("profiles").select("name,goal,weekly_goal,level,location,priority_muscles,session_minutes,height_cm,sex,birth_date,kcal_target,protein_target,carbs_target,fat_target,water_target_ml").eq("id", u.user.id).maybeSingle(),
     activePlan(sb),
     sb.from("ai_messages").select("role,content").eq("hidden", false).order("created_at", { ascending: false }).limit(16),
     sb.from("exercises").select("id,name,muscle_group,equipment"),
     sb.from("body_weights").select("measured_on,weight").order("measured_on", { ascending: false }).limit(3),
+    sb.from("meals").select("meal,name,kcal,protein,carbs,fat").eq("eaten_on", todayBR()),
   ]);
+  const targets = computeTargets(profile.data as never, weight.data?.[0]?.weight ?? null);
+  const eaten = (mealsToday.data ?? []).reduce((a, m) => ({ kcal: a.kcal + Number(m.kcal), p: a.p + Number(m.protein), c: a.c + Number(m.carbs), g: a.g + Number(m.fat) }), { kcal: 0, p: 0, c: 0, g: 0 });
+  const nutritionText = `Metas diárias: ${targets.kcal} kcal · ${targets.protein} g proteína · ${targets.carbs} g carboidrato · ${targets.fat} g gordura.
+Comido hoje: ${Math.round(eaten.kcal)} kcal · ${Math.round(eaten.p)} g P · ${Math.round(eaten.c)} g C · ${Math.round(eaten.g)} g G${(mealsToday.data ?? []).length ? ` (${(mealsToday.data ?? []).map((m) => `${MEAL_LABEL[m.meal as MealType]}: ${m.name}`).join("; ")})` : " (nada registrado)"}.`;
   const catalog = (catalogRes.data ?? []) as Ex[];
 
   const planText = plan?.plan_days.length
@@ -241,12 +274,15 @@ export async function POST(req: NextRequest) {
   const byGroup = new Map<string, string[]>();
   catalog.forEach((e) => byGroup.set(e.muscle_group, [...(byGroup.get(e.muscle_group) ?? []), e.name]));
 
-  const system = `Você é o assistente de treino do app Carga: um personal trainer brasileiro, direto, animado e prático. Responda em português do Brasil, curto (feito para ler no celular), sem enrolação.
+  const system = `Você é o assistente de treino e alimentação do app Carga: um personal trainer brasileiro com boa base de nutrição, direto, animado e prático. Responda em português do Brasil, curto (feito para ler no celular), sem enrolação.
 
 Hoje é ${new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "America/Sao_Paulo" })}.
 
 Usuário: ${profile.data?.name ?? "sem nome"} · objetivo: ${profile.data?.goal ?? "não informado"} · meta: ${profile.data?.weekly_goal ?? 4} treinos/semana · nível: ${profile.data?.level ?? "?"} · treina em: ${profile.data?.location ?? "?"} · tempo por treino: ${profile.data?.session_minutes ?? "?"} min · músculos prioritários: ${(profile.data?.priority_muscles ?? []).join(", ") || "nenhum"}${profile.data?.height_cm ? ` · altura: ${profile.data.height_cm} cm` : ""}.
 Peso recente: ${(weight.data ?? []).map((w) => `${w.weight} kg em ${w.measured_on}`).join(", ") || "não registrado"}.
+
+Nutrição:
+${nutritionText}
 
 Plano atual:
 ${planText}
@@ -259,6 +295,8 @@ Regras:
 - Para mudar só um dia, use ajustar_dia.
 - Se o usuário disser o peso ou medidas, registre com a ferramenta.
 - Volume típico: 3–4 séries, 6–12 reps para hipertrofia, 3–6 para força, 12–20 para resistência; 4–7 exercícios por dia.
+- Se o usuário contar o que comeu, registre com registrar_refeicao (estime porção e macros com a Tabela TACO) e diga quanto falta para as metas do dia.
+- Em dúvidas de alimentação, dê sugestões práticas com comida brasileira do dia a dia. Nada de dietas extremas, jejuns prolongados ou cortes radicais; se houver sinais de relação difícil com a comida, acolha e sugira um nutricionista ou profissional de saúde.
 - Não dê diagnóstico médico. Em caso de dor ou lesão, recomende procurar um profissional de saúde.
 - Não use markdown pesado: no máximo listas curtas com "-".`;
 
@@ -267,6 +305,7 @@ Regras:
 
   const client = new Anthropic();
   let changed = false;
+  let link: { href: string; label: string } | null = null;
   let reply = "";
   try {
     for (let i = 0; i < 6; i++) {
@@ -284,7 +323,13 @@ Regras:
       const results: Anthropic.ToolResultBlockParam[] = [];
       for (const t of toolUses) {
         const out = await runTool(sb, u.user.id, catalog, t.name, t.input as Record<string, unknown>);
-        if (t.name !== "historico_exercicio") changed = true;
+        if (t.name !== "historico_exercicio") {
+          changed = true;
+          link =
+            t.name === "registrar_refeicao" ? { href: "/nutricao", label: "ver nutrição" }
+            : t.name === "registrar_peso" || t.name === "registrar_medidas" ? { href: "/medidas", label: "ver medidas" }
+            : { href: "/treinos", label: "ver minha semana" };
+        }
         results.push({ type: "tool_result", tool_use_id: t.id, content: out });
       }
       messages.push({ role: "user", content: results });
@@ -299,5 +344,5 @@ Regras:
     { role: "user", content: text },
     { role: "assistant", content: reply },
   ]);
-  return NextResponse.json({ reply, changed, usage: { ...u0, used: u0.used + 1 } });
+  return NextResponse.json({ reply, changed, link, usage: { ...u0, used: u0.used + 1 } });
 }

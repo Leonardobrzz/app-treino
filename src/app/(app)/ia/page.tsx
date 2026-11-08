@@ -6,13 +6,13 @@ import { AnimatePresence, motion } from "motion/react";
 import { Header, Icon } from "@/components/ui";
 import { vibrate } from "@/lib/util";
 
-type Msg = { id: string; role: "user" | "assistant"; content: string; changed?: boolean };
+type Msg = { id: string; role: "user" | "assistant"; content: string; changed?: boolean; link?: { href: string; label: string } | null };
 
 const SUGGESTIONS = [
   "Monte uma semana ABC, 4x por semana, foco em hipertrofia",
   "Treino de pernas completo pra quinta",
   "Quanto devo descansar entre as séries?",
-  "Pesei 79,2 kg hoje",
+  "Almocei arroz, feijão, frango grelhado e salada",
 ];
 
 type SpeechRec = { lang: string; interimResults: boolean; continuous: boolean; start: () => void; stop: () => void; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null };
@@ -73,7 +73,7 @@ export default function AIPage() {
       }
       if (!r.ok) throw new Error(d.error);
       if (d.usage && !d.usage.pro && d.usage.used >= d.usage.limit) setLimited(true);
-      setMsgs((m) => [...m, { id: crypto.randomUUID(), role: "assistant", content: d.reply, changed: d.changed }]);
+      setMsgs((m) => [...m, { id: crypto.randomUUID(), role: "assistant", content: d.reply, changed: d.changed, link: d.link }]);
       if (d.changed) vibrate([10, 40, 10]);
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : "Não foi possível falar com a IA.");
@@ -116,7 +116,7 @@ export default function AIPage() {
     <div className="flex min-h-[calc(100dvh-90px)] flex-col">
       <Header
         title="Assistente"
-        eyebrow="IA DE TREINO"
+        eyebrow="TREINO E ALIMENTAÇÃO"
         right={
           usage && !usage.pro && !msgs.length ? (
             <Link href="/pro" className="press flex h-9 items-center gap-1.5 rounded-full bg-card px-3 text-[13px] font-semibold text-label-2">
@@ -155,8 +155,8 @@ export default function AIPage() {
             <motion.div key={m.id} initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: "spring", stiffness: 420, damping: 32 }} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
               <div className={`max-w-[85%] whitespace-pre-wrap rounded-[20px] px-4 py-2.5 text-[16px] leading-snug ${m.role === "user" ? "rounded-br-md bg-accent text-on-accent" : "rounded-bl-md bg-card"}`}>{m.content}</div>
               {m.changed && (
-                <Link href="/treinos" className="press mt-1.5 flex items-center gap-1.5 rounded-full bg-good-soft px-3 py-1.5 text-[14px] font-semibold text-good">
-                  <Icon name="check" size={15} stroke={3} /> Salvo · ver minha semana
+                <Link href={m.link?.href ?? "/treinos"} className="press mt-1.5 flex items-center gap-1.5 rounded-full bg-good-soft px-3 py-1.5 text-[14px] font-semibold text-good">
+                  <Icon name="check" size={15} stroke={3} /> Salvo · {m.link?.label ?? "ver minha semana"}
                 </Link>
               )}
             </motion.div>

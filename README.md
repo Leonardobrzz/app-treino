@@ -63,9 +63,16 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 - [x] Ajusta um dia específico, registra peso e medidas e consulta o histórico de um exercício
 - [x] Entrada por **voz** (Web Speech API, em português)
 
+**Nutrição**
+- [x] Diário de alimentação por refeição (café, almoço, lanche e jantar) e controle de água
+- [x] Metas de calorias, proteína, carboidrato e gordura calculadas pelo perfil (Mifflin-St Jeor + objetivo) ou personalizadas
+- [x] **Foto do prato → calorias**: a IA identifica cada alimento, estima a porção e os macros, e dá pra ajustar antes de salvar (Pro)
+- [x] Também dá pra descrever a refeição em texto ou contar pro chat da IA ("almocei arroz, feijão e frango") que ela registra sozinha
+- [x] Alimentos recentes com um toque e gráfico dos últimos 7 dias (Pro)
+
 **Carga Pro (assinatura)**
 - [x] Teste grátis de 7 dias, plano mensal (R$ 14,90) e anual (R$ 99,90) com pagamento pelo **Stripe**
-- [x] Grátis: 5 mensagens por mês com a IA. Pro: IA sem limite, gráfico de força (1RM), evolução do ano inteiro e linha do tempo do corpo
+- [x] Grátis: 5 mensagens por mês com a IA. Pro: IA sem limite, calorias pela foto do prato, gráfico de força (1RM), evolução do ano inteiro e linha do tempo do corpo
 - [x] Portal do cliente para trocar de plano, atualizar o cartão ou cancelar
 - [x] Webhook do Stripe sincroniza a assinatura com o banco automaticamente
 
@@ -82,6 +89,10 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 | Medidas | Peso | Assistente de IA |
 |:---:|:---:|:---:|
 | ![](docs/screenshots/medidas-light.png) | ![](docs/screenshots/peso-light.png) | ![](docs/screenshots/ia-light.png) |
+
+| Nutrição | Foto do prato analisada | Nutrição (escuro) |
+|:---:|:---:|:---:|
+| ![](docs/screenshots/nutricao-light.png) | ![](docs/screenshots/nutricao-foto-light.png) | ![](docs/screenshots/nutricao-dark.png) |
 
 ### Tema escuro
 
@@ -150,6 +161,7 @@ O app abre em `http://localhost:3000`.
    - `20261108000003_onboarding.sql` → dados do onboarding no perfil
    - `20261108000004_assinaturas.sql` → assinaturas do Pro (depois, cadastre o segredo em `private.app_secrets`, como explica o arquivo)
    - `20261108000005_ai_messages_hidden.sql` → histórico da IA
+   - `20261108000006_nutricao.sql` → refeições, água e metas de nutrição
 3. Em **Authentication → URL Configuration**, configure:
    - **Site URL**: a URL do app publicado
    - **Redirect URLs**: `https://SEU-DOMINIO/auth/confirm` e `http://localhost:3000/auth/confirm`
@@ -165,6 +177,9 @@ auth.users ──┬── profiles            nome, objetivo, meta semanal
              ├── body_weights        peso por data
              ├── body_measurements   8 medidas por data
              ├── checkins            presença na academia
+             ├── meals               alimentos por refeição e dia (kcal e macros)
+             ├── water_logs          copos de água
+             ├── nutrition_scans     uso da análise por foto (limite diário)
              ├── subscriptions       assinatura do Pro (só o webhook escreve)
              └── ai_messages         histórico do chat com a IA
 ```
@@ -205,10 +220,12 @@ src/
 │   │   ├── exercicios/    biblioteca
 │   │   ├── evolucao/      estatísticas e gráficos
 │   │   ├── medidas/       peso, medidas e corpo anatômico
+│   │   ├── nutricao/      diário alimentar, água e metas
 │   │   ├── ia/            chat com o assistente
 │   │   └── perfil/        meta, objetivo, tema e sair
 │   ├── (focus)/treino/    treino ao vivo (tela cheia)
 │   ├── api/ia/            rota que conversa com o Claude
+│   ├── api/nutricao/      análise de foto/texto da refeição com o Claude
 │   └── auth/confirm/      retorno dos links de e-mail
 ├── components/            UI, corpo anatômico (Body), gráfico (LineChart), seletor de exercícios
 ├── lib/                   cliente Supabase, tipos, lógica de progressão, tema
