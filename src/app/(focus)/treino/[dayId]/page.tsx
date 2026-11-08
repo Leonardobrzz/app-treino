@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Button, Icon, Sheet, Spinner } from "@/components/ui";
 import { checkInToday, lastSetsByExercise, type DayWithExercises } from "@/lib/data";
 import { loadExercises } from "@/components/ExercisePicker";
+import { ExerciseGuideSheet, type GuideExercise } from "@/components/ExerciseGuide";
 import { alternativesFor } from "@/lib/plan-generator";
 import { MODE_TEXT, PAIN_AREAS, dayMode, lighter, painFor, type PainArea, type Readiness } from "@/lib/readiness";
 import { drawWorkoutCard, shareImage } from "@/lib/share-card";
@@ -50,6 +51,7 @@ export default function LiveWorkout() {
   const [askReady, setAskReady] = useState(false);
   const [swapIdx, setSwapIdx] = useState<number | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [guide, setGuide] = useState<GuideExercise | null>(null);
   const creating = useRef(false);
   const meta = useRef<SessionMeta>({ readiness: null, swaps: {}, skipped: [] });
 
@@ -331,6 +333,9 @@ export default function LiveWorkout() {
                 <span className="text-[12px] font-semibold uppercase tracking-wide text-label-2">{b.group}</span>
                 <h2 className="text-[20px] font-bold leading-tight">{b.name}</h2>
                 <span className="text-[14px] text-label-2">Meta: {b.sets.length} × {b.reps}</span>
+                <button onClick={() => setGuide({ name: b.name, muscle_group: b.group, equipment: b.equipment })} className="mt-1 flex items-center gap-1 self-start text-[14px] font-semibold text-accent-ink">
+                  <Icon name="play" size={12} /> Como fazer
+                </button>
               </div>
               <div className="flex shrink-0 gap-1.5">
                 {b.equipment === "Barra" && (
@@ -459,6 +464,7 @@ export default function LiveWorkout() {
       </Sheet>
 
       <ReadinessSheet open={askReady} onDone={startWith} />
+      <ExerciseGuideSheet exercise={guide} onClose={() => setGuide(null)} />
 
       <SwapSheet
         block={swapIdx != null ? blocks[swapIdx] : null}

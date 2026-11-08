@@ -39,6 +39,7 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 - [x] Configurar séries, repetições (ex.: `8-12`), carga, descanso e uma nota por exercício
 - [x] Biblioteca com **134 exercícios** em português, com busca e filtro por grupo muscular
 - [x] Criar exercícios próprios quando não estão na lista
+- [x] **Como fazer**: fotos do início e do fim do movimento alternando (tipo GIF), músculos trabalhados e 3 dicas de execução em português, na biblioteca, no editor do dia e no treino ao vivo (129 dos 134 exercícios têm imagem)
 - [x] Reordenar e remover exercícios
 
 **Treino ao vivo**
@@ -102,6 +103,10 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 | Importar ficha | Dia mais leve | Máquina ocupada |
 |:---:|:---:|:---:|
 | ![](docs/screenshots/importar-ficha-light.png) | ![](docs/screenshots/dia-leve-light.png) | ![](docs/screenshots/maquina-ocupada-light.png) |
+
+| Como fazer |  |  |
+|:---:|:---:|:---:|
+| ![](docs/screenshots/como-fazer-light.png) |  |  |
 
 | Resumo da semana | Amigos | Card pro story |
 |:---:|:---:|:---:|
@@ -271,6 +276,10 @@ docs/screenshots/          prints usados neste README
 - [ ] Modo offline (salvar o treino sem internet e sincronizar depois)
 - [ ] Notificação quando o descanso termina com a tela bloqueada
 - [ ] Versão nativa com React Native / Expo
+
+## Créditos
+
+- Fotos dos exercícios: [free-exercise-db](https://github.com/yuhonas/free-exercise-db), em domínio público (Unlicense). As dicas de execução em português foram escritas para o Carga.
 
 ## Autor
 

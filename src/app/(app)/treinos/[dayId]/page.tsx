@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ExerciseList } from "@/components/ExercisePicker";
+import { ExerciseGuideSheet, type GuideExercise } from "@/components/ExerciseGuide";
 import { Button, Header, Icon, LinkButton, Sheet, Spinner } from "@/components/ui";
 import type { DayWithExercises } from "@/lib/data";
 import { supabase } from "@/lib/supabase/client";
@@ -16,6 +17,7 @@ export default function DayEditor() {
   const { dayId } = useParams<{ dayId: string }>();
   const router = useRouter();
   const [day, setDay] = useState<DayWithExercises | null>(null);
+  const [guide, setGuide] = useState<GuideExercise | null>(null);
   const [picking, setPicking] = useState(false);
   const [selected, setSelected] = useState<Map<string, Exercise>>(new Map());
   const [settings, setSettings] = useState(false);
@@ -105,6 +107,9 @@ export default function DayEditor() {
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="text-[17px] font-semibold leading-snug">{r.exercises.name}</span>
                   <span className="text-[13px] text-label-2">{r.exercises.muscle_group} · {r.exercises.equipment}</span>
+                  <button onClick={() => setGuide(r.exercises)} className="mt-1 flex items-center gap-1 self-start text-[14px] font-semibold text-accent-ink">
+                    <Icon name="play" size={12} /> Como fazer
+                  </button>
                 </div>
                 <div className="flex gap-1">
                   <button onClick={() => move(i, -1)} disabled={i === 0} aria-label="Subir" className="press flex h-8 w-8 items-center justify-center rounded-full bg-card-2 text-label-2 disabled:opacity-30">
@@ -187,6 +192,7 @@ export default function DayEditor() {
           </Button>
         </div>
       </Sheet>
+      <ExerciseGuideSheet exercise={guide} onClose={() => setGuide(null)} />
     </>
   );
 }

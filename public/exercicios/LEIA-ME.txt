@@ -1,0 +1,3 @@
+Imagens dos exercícios: free-exercise-db (https://github.com/yuhonas/free-exercise-db),
+liberadas em domínio público (Unlicense). Redimensionadas para 480 px em WebP.
+guia.json: imagem e dicas de execução (em português, escritas para o Carga) por nome do exercício.

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import type { Exercise } from "@/lib/types";
 import { Button, Icon } from "./ui";
+import { ExerciseGuideSheet } from "./ExerciseGuide";
 
 export const GROUPS = ["Peito", "Costas", "Ombros", "Bíceps", "Tríceps", "Antebraço", "Trapézio", "Abdômen", "Quadríceps", "Posterior de coxa", "Glúteos", "Adutores", "Panturrilha", "Cardio"];
 
@@ -32,6 +33,7 @@ export function ExerciseList({
   const [creating, setCreating] = useState(false);
   const [newGroup, setNewGroup] = useState(GROUPS[0]);
   const [newEquip, setNewEquip] = useState("Máquina");
+  const [guide, setGuide] = useState<Exercise | null>(null);
 
   useEffect(() => {
     loadExercises().then(setAll);
@@ -77,7 +79,7 @@ export function ExerciseList({
           const on = selected?.has(e.id);
           return (
             <li key={e.id} className="border-b border-sep last:border-b-0">
-              <button disabled={!selectable} onClick={() => onToggle?.(e)} className="press flex w-full items-center gap-3 px-4 py-3 text-left disabled:active:scale-100 disabled:active:opacity-100">
+              <button onClick={() => (selectable ? onToggle?.(e) : setGuide(e))} className="press flex w-full items-center gap-3 px-4 py-3 text-left">
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-[16px] font-medium">{e.name}</span>
                   <span className="text-[13px] text-label-2">
@@ -85,6 +87,7 @@ export function ExerciseList({
                     {e.created_by ? " · seu" : ""}
                   </span>
                 </div>
+                {!selectable && <Icon name="chevron" size={17} className="text-label-3" />}
                 {selectable && (
                   <span className={`flex h-7 w-7 items-center justify-center rounded-full ${on ? "bg-accent text-on-accent" : "ring-2 ring-fill"}`}>{on && <Icon name="check" size={15} stroke={3} />}</span>
                 )}
@@ -120,6 +123,7 @@ export function ExerciseList({
           )}
         </div>
       )}
+      {!selectable && <ExerciseGuideSheet exercise={guide} onClose={() => setGuide(null)} />}
     </div>
   );
 }
