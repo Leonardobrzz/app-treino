@@ -1,0 +1,63 @@
+export type Exercise = {
+  id: string;
+  name: string;
+  muscle_group: string;
+  secondary: string[];
+  equipment: string;
+  created_by: string | null;
+};
+
+export type Plan = { id: string; name: string; active: boolean; created_at: string };
+
+export type PlanDay = { id: string; plan_id: string; weekday: number; title: string };
+
+export type PlanExercise = {
+  id: string;
+  plan_day_id: string;
+  exercise_id: string;
+  position: number;
+  sets: number;
+  reps: string;
+  target_weight: number | null;
+  rest_seconds: number;
+  notes: string | null;
+  exercises?: Exercise;
+};
+
+export type Session = {
+  id: string;
+  plan_day_id: string | null;
+  title: string;
+  started_at: string;
+  finished_at: string | null;
+};
+
+export type SessionSet = {
+  id: string;
+  session_id: string;
+  exercise_id: string;
+  set_number: number;
+  weight: number;
+  reps: number;
+  done: boolean;
+  created_at: string;
+};
+
+export type BodyWeight = { id: string; measured_on: string; weight: number; body_fat: number | null };
+
+export const MEASURES = ["peito", "cintura", "braco", "antebraco", "coxa", "panturrilha", "quadril", "pescoco"] as const;
+export type MeasureKey = (typeof MEASURES)[number];
+export type BodyMeasurement = { id: string; measured_on: string } & Record<MeasureKey, number | null>;
+
+export const MEASURE_LABEL: Record<MeasureKey, string> = {
+  peito: "Peitoral",
+  cintura: "Cintura",
+  braco: "Braço",
+  antebraco: "Antebraço",
+  coxa: "Coxa",
+  panturrilha: "Panturrilha",
+  quadril: "Quadril",
+  pescoco: "Pescoço",
+};
+
+export type Profile = { id: string; name: string | null; goal: string | null; weekly_goal: number };
