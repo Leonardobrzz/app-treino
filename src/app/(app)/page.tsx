@@ -40,6 +40,14 @@ export default function TodayPage() {
         router.replace("/bem-vindo");
         return;
       }
+      try {
+        if (localStorage.getItem("convite")) {
+          router.replace("/amigos");
+          return;
+        }
+      } catch {
+        /* sem storage */
+      }
       setProfile(p);
       setPlan(pl);
       setSessionDates((ses.data ?? []).map((s: { started_at: string }) => s.started_at));
@@ -74,6 +82,7 @@ export default function TodayPage() {
   const nextDay = plan?.plan_days.find((d) => d.weekday > new Date().getDay()) ?? plan?.plan_days[0];
   const checkedToday = checkins.includes(todayISO());
   const nt = computeTargets(profile, food.weight);
+  const showReport = !!dateLabel && new Date().getDay() <= 2 && sessionDates.length > 0;
 
   const suggestions = (todayDay?.plan_exercises ?? [])
     .map((pe) => ({ pe, s: suggest(last[pe.exercise_id] ?? [], pe.reps, pe.sets, pe.exercises.equipment) }))
@@ -223,6 +232,19 @@ export default function TodayPage() {
                 ))}
               </div>
             </Card>
+          )}
+
+          {showReport && (
+            <Link href="/resumo" className="press mx-5 mt-4 flex items-center gap-3 rounded-2xl bg-accent-soft p-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-on-accent">
+                <Icon name="chart" size={21} />
+              </div>
+              <div className="flex flex-1 flex-col">
+                <span className="text-[16px] font-semibold">Seu resumo da semana chegou</span>
+                <span className="text-[14px] text-label-2">Treinos, recordes, músculos e o que ajustar</span>
+              </div>
+              <Icon name="chevron" size={18} className="text-label-3" />
+            </Link>
           )}
 
           <Link href="/nutricao" className="press mx-5 mt-4 flex items-center gap-4 rounded-2xl bg-card p-4">

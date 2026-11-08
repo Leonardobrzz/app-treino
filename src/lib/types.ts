@@ -82,7 +82,10 @@ export type Profile = {
   carbs_target: number | null;
   fat_target: number | null;
   water_target_ml: number | null;
+  friend_code: string;
 };
+
+export type ProgressPhoto = { id: string; taken_on: string; pose: "frente" | "lado" | "costas"; path: string; created_at: string };
 
 export const MEAL_TYPES = ["cafe", "almoco", "lanche", "jantar"] as const;
 export type MealType = (typeof MEAL_TYPES)[number];

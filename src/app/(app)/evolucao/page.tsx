@@ -119,6 +119,36 @@ export default function EvolutionPage() {
             </div>
             <Icon name="chevron" size={18} className="text-label-3" />
           </Link>
+          <Link href="/fotos" className="press mx-5 mt-2.5 flex items-center gap-3 rounded-2xl bg-card p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
+              <Icon name="image" size={22} />
+            </div>
+            <div className="flex flex-1 flex-col">
+              <span className="text-[16px] font-semibold">Fotos de progresso</span>
+              <span className="text-[13px] text-label-2">Antes e depois, lado a lado</span>
+            </div>
+            <Icon name="chevron" size={18} className="text-label-3" />
+          </Link>
+          <Link href="/resumo" className="press mx-5 mt-2.5 flex items-center gap-3 rounded-2xl bg-card p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
+              <Icon name="chart" size={22} />
+            </div>
+            <div className="flex flex-1 flex-col">
+              <span className="text-[16px] font-semibold">Resumo da semana</span>
+              <span className="text-[13px] text-label-2">Treinos, recordes e o que ajustar</span>
+            </div>
+            <Icon name="chevron" size={18} className="text-label-3" />
+          </Link>
+          <Link href="/amigos" className="press mx-5 mt-2.5 flex items-center gap-3 rounded-2xl bg-card p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
+              <Icon name="users" size={22} />
+            </div>
+            <div className="flex flex-1 flex-col">
+              <span className="text-[16px] font-semibold">Amigos</span>
+              <span className="text-[13px] text-label-2">Ranking da semana com a galera</span>
+            </div>
+            <Icon name="chevron" size={18} className="text-label-3" />
+          </Link>
 
           {sessions.length === 0 ? (
             <div className="pt-6">

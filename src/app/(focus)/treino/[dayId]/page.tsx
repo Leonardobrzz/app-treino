@@ -6,12 +6,33 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button, Icon, Sheet, Spinner } from "@/components/ui";
 import { checkInToday, lastSetsByExercise, type DayWithExercises } from "@/lib/data";
+import { loadExercises } from "@/components/ExercisePicker";
+import { alternativesFor } from "@/lib/plan-generator";
+import { MODE_TEXT, PAIN_AREAS, dayMode, lighter, painFor, type PainArea, type Readiness } from "@/lib/readiness";
+import { drawWorkoutCard, shareImage } from "@/lib/share-card";
 import { supabase } from "@/lib/supabase/client";
-import type { SessionSet } from "@/lib/types";
-import { epley, mmss, num, repRange, suggest, todayISO, vibrate } from "@/lib/util";
+import type { Exercise, SessionSet } from "@/lib/types";
+import { epley, fmtDate, mmss, num, repRange, suggest, todayISO, vibrate } from "@/lib/util";
 
 type SetRow = { id?: string; set_number: number; weight: string; reps: string; done: boolean };
-type Block = { peId: string; exerciseId: string; name: string; equipment: string; group: string; reps: string; rest: number; notes: string | null; prev: SessionSet[]; sug: ReturnType<typeof suggest>; sets: SetRow[] };
+type Block = { peId: string; exerciseId: string; name: string; equipment: string; group: string; reps: string; rest: number; notes: string | null; prev: SessionSet[]; sug: ReturnType<typeof suggest>; sets: SetRow[]; plannedSets: number; pain: PainArea | null };
+
+type SessionMeta = { readiness: Readiness | null; swaps: Record<string, string>; skipped: string[] };
+const w2s = (w: number) => (w ? String(w).replace(".", ",") : "");
+
+/** Aplica o "como você está hoje" nas séries que ainda não foram feitas */
+function applyReadiness(blocks: Block[], r: Readiness | null): Block[] {
+  const mode = dayMode(r);
+  return blocks.map((b) => {
+    const pain = painFor(r, b);
+    if (mode !== "leve") return { ...b, pain };
+    const target = Math.max(2, b.plannedSets - 1);
+    let sets = [...b.sets];
+    while (sets.length > target && !sets.at(-1)!.done && !sets.at(-1)!.id) sets = sets.slice(0, -1);
+    sets = sets.map((x) => (x.done || x.id ? x : { ...x, weight: w2s(lighter(Number(x.weight.replace(",", ".")) || 0, b.equipment)) }));
+    return { ...b, pain, sets, sug: b.sug ? { ...b.sug, up: false } : null };
+  });
+}
 
 export default function LiveWorkout() {
   const { dayId } = useParams<{ dayId: string }>();
@@ -25,7 +46,12 @@ export default function LiveWorkout() {
   const [plates, setPlates] = useState<number | null>(null);
   const [summary, setSummary] = useState<{ volume: number; sets: number; minutes: number; prs: string[] } | null>(null);
   const [confirmQuit, setConfirmQuit] = useState(false);
+  const [readiness, setReadiness] = useState<Readiness | null>(null);
+  const [askReady, setAskReady] = useState(false);
+  const [swapIdx, setSwapIdx] = useState<number | null>(null);
+  const [sharing, setSharing] = useState(false);
   const creating = useRef(false);
+  const meta = useRef<SessionMeta>({ readiness: null, swaps: {}, skipped: [] });
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 500);
@@ -46,6 +72,7 @@ export default function LiveWorkout() {
     const { data: open } = await supabase().from("sessions").select("*").eq("plan_day_id", dayId).is("finished_at", null).gte("started_at", since.toISOString()).order("started_at", { ascending: false }).limit(1).maybeSingle();
     let sid = open?.id as string | undefined;
     let existing: SessionSet[] = [];
+    const saved = (open?.readiness ?? {}) as SessionMeta;
     if (sid) {
       setStartedAt(new Date(open!.started_at).getTime());
       const { data: ss } = await supabase().from("session_sets").select("*").eq("session_id", sid);
@@ -54,28 +81,93 @@ export default function LiveWorkout() {
       const { data: created } = await supabase().from("sessions").insert({ plan_day_id: dayId, title: d.title }).select().single();
       sid = created?.id;
       checkInToday();
+      setAskReady(true);
     }
     setSessionId(sid ?? null);
+    meta.current = { readiness: saved.readiness ?? null, swaps: saved.swaps ?? {}, skipped: saved.skipped ?? [] };
 
-    const last = await lastSetsByExercise(d.plan_exercises.map((p) => p.exercise_id));
-    setBlocks(
-      d.plan_exercises.map((pe) => {
-        const prev = last[pe.exercise_id] ?? [];
-        const sug = suggest(prev, pe.reps, pe.sets, pe.exercises.equipment);
-        const mine = existing.filter((s) => s.exercise_id === pe.exercise_id).sort((a, b) => a.set_number - b.set_number);
-        const baseW = sug?.weight ?? pe.target_weight ?? prev.at(-1)?.weight ?? 0;
-        const baseR = sug?.reps ?? repRange(pe.reps)[0];
-        const count = Math.max(pe.sets, mine.length);
-        const sets: SetRow[] = Array.from({ length: count }, (_, i) => {
-          const m = mine.find((s) => s.set_number === i + 1);
-          return m
-            ? { id: m.id, set_number: i + 1, weight: String(m.weight).replace(".", ","), reps: String(m.reps), done: m.done }
-            : { set_number: i + 1, weight: baseW ? String(baseW).replace(".", ",") : "", reps: String(baseR || ""), done: false };
-        });
-        return { peId: pe.id, exerciseId: pe.exercise_id, name: pe.exercises.name, equipment: pe.exercises.equipment, group: pe.exercises.muscle_group, reps: pe.reps, rest: pe.rest_seconds, notes: pe.notes, prev, sug, sets };
-      }),
-    );
+    // exercícios trocados nesta sessão ("máquina ocupada")
+    const swapIds = Object.values(meta.current.swaps);
+    const swapped = new Map<string, Exercise>();
+    if (swapIds.length) {
+      const { data: exs } = await supabase().from("exercises").select("*").in("id", swapIds);
+      (exs ?? []).forEach((e: Exercise) => swapped.set(e.id, e));
+    }
+    const pes = d.plan_exercises.filter((pe) => !meta.current.skipped.includes(pe.id));
+    const exOf = (pe: (typeof pes)[number]) => swapped.get(meta.current.swaps[pe.id]) ?? pe.exercises;
+    const last = await lastSetsByExercise(pes.map((pe) => exOf(pe).id));
+    const built: Block[] = pes.map((pe) => {
+      const ex = exOf(pe);
+      const prev = last[ex.id] ?? [];
+      const sug = suggest(prev, pe.reps, pe.sets, ex.equipment);
+      const mine = existing.filter((s) => s.exercise_id === ex.id).sort((a, b) => a.set_number - b.set_number);
+      const baseW = sug?.weight ?? (ex.id === pe.exercise_id ? pe.target_weight : null) ?? prev.at(-1)?.weight ?? 0;
+      const baseR = sug?.reps ?? repRange(pe.reps)[0];
+      const count = Math.max(pe.sets, mine.length);
+      const sets: SetRow[] = Array.from({ length: count }, (_, i) => {
+        const m = mine.find((x) => x.set_number === i + 1);
+        return m ? { id: m.id, set_number: i + 1, weight: w2s(Number(m.weight)) || "0", reps: String(m.reps), done: m.done } : { set_number: i + 1, weight: w2s(baseW), reps: String(baseR || ""), done: false };
+      });
+      return { peId: pe.id, exerciseId: ex.id, name: ex.name, equipment: ex.equipment, group: ex.muscle_group, reps: pe.reps, rest: pe.rest_seconds, notes: pe.notes, prev, sug, sets, plannedSets: pe.sets, pain: null };
+    });
+    setReadiness(meta.current.readiness);
+    setBlocks(applyReadiness(built, meta.current.readiness));
   }, [dayId, router]);
+
+  async function saveMeta(patch: Partial<SessionMeta>) {
+    meta.current = { ...meta.current, ...patch };
+    if (sessionId) await supabase().from("sessions").update({ readiness: meta.current }).eq("id", sessionId);
+  }
+
+  function startWith(r: Readiness | null) {
+    setAskReady(false);
+    setReadiness(r);
+    setBlocks((bs) => applyReadiness(bs, r));
+    saveMeta({ readiness: r });
+    if (r) vibrate(12);
+  }
+
+  async function swapTo(bi: number, ex: Exercise, alsoPlan: boolean) {
+    const b = blocks[bi];
+    setSwapIdx(null);
+    const last = await lastSetsByExercise([ex.id]);
+    const prev = last[ex.id] ?? [];
+    const sug0 = suggest(prev, b.reps, b.plannedSets, ex.equipment);
+    const leve = dayMode(readiness) === "leve";
+    const baseW0 = sug0?.weight ?? prev.at(-1)?.weight ?? 0;
+    const baseW = leve ? lighter(baseW0, ex.equipment) : baseW0;
+    const ids = b.sets.filter((x) => x.id).map((x) => x.id!);
+    if (ids.length) await supabase().from("session_sets").update({ exercise_id: ex.id, weight: baseW }).in("id", ids);
+    if (alsoPlan) await supabase().from("plan_exercises").update({ exercise_id: ex.id, target_weight: null }).eq("id", b.peId);
+    setBlocks((bs) =>
+      bs.map((x, i) =>
+        i !== bi
+          ? x
+          : {
+              ...x,
+              exerciseId: ex.id,
+              name: ex.name,
+              equipment: ex.equipment,
+              group: ex.muscle_group,
+              prev,
+              sug: sug0 && leve ? { ...sug0, up: false } : sug0,
+              pain: painFor(readiness, { name: ex.name, group: ex.muscle_group }),
+              sets: x.sets.map((r) => ({ ...r, weight: w2s(baseW) })),
+            },
+      ),
+    );
+    if (!alsoPlan) saveMeta({ swaps: { ...meta.current.swaps, [b.peId]: ex.id } });
+    vibrate(12);
+  }
+
+  async function skip(bi: number) {
+    const b = blocks[bi];
+    setSwapIdx(null);
+    const ids = b.sets.filter((x) => x.id).map((x) => x.id!);
+    if (ids.length) await supabase().from("session_sets").delete().in("id", ids);
+    setBlocks((bs) => bs.filter((_, i) => i !== bi));
+    saveMeta({ skipped: [...meta.current.skipped, b.peId] });
+  }
 
   useEffect(() => {
     init();
@@ -156,6 +248,25 @@ export default function LiveWorkout() {
     setSummary({ volume, sets: doneSets, minutes: Math.round((Date.now() - startedAt) / 60000), prs });
   }
 
+  async function shareCard() {
+    if (!summary || !day) return;
+    setSharing(true);
+    try {
+      const exercises = blocks
+        .map((b) => {
+          const done = b.sets.filter((x) => x.done);
+          if (!done.length) return null;
+          const best = done.reduce((a, x) => (epley(Number(x.weight.replace(",", ".")) || 0, parseInt(x.reps) || 0) > epley(Number(a.weight.replace(",", ".")) || 0, parseInt(a.reps) || 0) ? x : a));
+          return { name: b.name, best: `${done.length}× · ${best.weight || 0} kg × ${best.reps}` };
+        })
+        .filter((x) => x !== null);
+      const blob = await drawWorkoutCard({ title: day.title, dateLabel: fmtDate(todayISO()), volumeKg: summary.volume, sets: summary.sets, minutes: summary.minutes, prs: summary.prs, exercises });
+      await shareImage(blob, `carga-${todayISO()}.png`, summary.prs.length ? `Recorde no ${summary.prs[0]}! 🏆` : `Treino de hoje: ${day.title} ✅`);
+    } finally {
+      setSharing(false);
+    }
+  }
+
   async function discard() {
     if (sessionId) await supabase().from("sessions").delete().eq("id", sessionId);
     await supabase().from("checkins").delete().eq("checked_on", todayISO());
@@ -202,6 +313,17 @@ export default function LiveWorkout() {
       </div>
 
       <div className="flex flex-col gap-3 px-4 pt-4">
+        {readiness && (
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={`flex items-start gap-3 rounded-[18px] p-4 ${dayMode(readiness) === "leve" ? "bg-card" : dayMode(readiness) === "forte" ? "bg-good-soft" : "bg-card"}`} data-testid="modo-dia">
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${dayMode(readiness) === "forte" ? "bg-good text-white" : "bg-accent-soft text-accent-ink"}`}>
+              <Icon name={dayMode(readiness) === "leve" ? "heart" : dayMode(readiness) === "forte" ? "flame" : "check"} size={19} />
+            </span>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[15px] font-semibold">{MODE_TEXT[dayMode(readiness)].title}</span>
+              <span className="text-[14px] leading-snug text-label-2">{MODE_TEXT[dayMode(readiness)].text}</span>
+            </div>
+          </motion.div>
+        )}
         {blocks.map((b, bi) => (
           <motion.section key={b.peId} layout className={`rounded-[20px] bg-card p-4 transition-shadow ${bi === currentIdx ? "ring-2 ring-accent/60" : ""}`}>
             <div className="flex items-start justify-between gap-2">
@@ -210,12 +332,36 @@ export default function LiveWorkout() {
                 <h2 className="text-[20px] font-bold leading-tight">{b.name}</h2>
                 <span className="text-[14px] text-label-2">Meta: {b.sets.length} × {b.reps}</span>
               </div>
-              {b.equipment === "Barra" && (
-                <button onClick={() => setPlates(Number(b.sets.find((s) => !s.done)?.weight.replace(",", ".") || b.sets[0].weight.replace(",", ".")) || 20)} className="press h-8 shrink-0 rounded-full bg-card-2 px-3 text-[13px] font-semibold text-accent-ink">
-                  Anilhas
-                </button>
-              )}
+              <div className="flex shrink-0 gap-1.5">
+                {b.equipment === "Barra" && (
+                  <button onClick={() => setPlates(Number(b.sets.find((s) => !s.done)?.weight.replace(",", ".") || b.sets[0].weight.replace(",", ".")) || 20)} className="press h-8 shrink-0 rounded-full bg-card-2 px-3 text-[13px] font-semibold text-accent-ink">
+                    Anilhas
+                  </button>
+                )}
+                {!b.sets.some((x) => x.done) && (
+                  <button onClick={() => setSwapIdx(bi)} aria-label={`Trocar ${b.name}`} className="press flex h-8 shrink-0 items-center gap-1 rounded-full bg-card-2 px-3 text-[13px] font-semibold text-accent-ink">
+                    <Icon name="swap" size={14} /> Trocar
+                  </button>
+                )}
+              </div>
             </div>
+
+            {b.pain && (
+              <div className="mt-2 flex items-start gap-2 rounded-xl bg-[color-mix(in_srgb,var(--bad)_12%,transparent)] px-3 py-2.5 text-[14px] leading-snug">
+                <Icon name="help" size={18} className="mt-px shrink-0 text-bad" />
+                <span>
+                  Você marcou dor em <b>{b.pain.toLowerCase()}</b>. Se incomodar, use menos carga,{" "}
+                  {!b.sets.some((x) => x.done) ? (
+                    <button onClick={() => setSwapIdx(bi)} className="font-semibold text-accent-ink underline">
+                      troque ou pule
+                    </button>
+                  ) : (
+                    "ou pule"
+                  )}
+                  . Dor forte ou que não passa: procure um profissional.
+                </span>
+              </div>
+            )}
 
             {b.notes && (
               <div className="mt-2 flex items-center gap-2 rounded-[10px] bg-card-2 px-3 py-2 text-[14px] text-label-2">
@@ -312,6 +458,16 @@ export default function LiveWorkout() {
         </div>
       </Sheet>
 
+      <ReadinessSheet open={askReady} onDone={startWith} />
+
+      <SwapSheet
+        block={swapIdx != null ? blocks[swapIdx] : null}
+        exclude={blocks.map((x) => x.exerciseId)}
+        onClose={() => setSwapIdx(null)}
+        onPick={(ex, alsoPlan) => swapIdx != null && swapTo(swapIdx, ex, alsoPlan)}
+        onSkip={() => swapIdx != null && skip(swapIdx)}
+      />
+
       <AnimatePresence>
         {summary && (
           <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -338,7 +494,10 @@ export default function LiveWorkout() {
                   <b>Novo recorde!</b> {summary.prs.join(", ")}
                 </div>
               )}
-              <Button size="lg" className="mt-5 w-full" onClick={() => router.replace("/")}>
+              <Button size="lg" className="mt-5 w-full" disabled={sharing} onClick={shareCard}>
+                <Icon name="send" size={18} /> {sharing ? "Gerando imagem…" : "Postar no story"}
+              </Button>
+              <Button size="lg" variant="secondary" className="mt-2 w-full" onClick={() => router.replace("/")}>
                 Fechar
               </Button>
             </motion.div>
@@ -346,5 +505,102 @@ export default function LiveWorkout() {
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+function Choice<T extends string | number>({ label, value, options, onChange }: { label: string; value: T | null; options: { value: T; label: string }[]; onChange: (v: T) => void }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-[15px] font-semibold">{label}</span>
+      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }} role="radiogroup" aria-label={label}>
+        {options.map((o) => (
+          <button key={String(o.value)} role="radio" aria-checked={value === o.value} onClick={() => onChange(o.value)} className={`press h-11 rounded-xl text-[15px] font-semibold ${value === o.value ? "bg-accent text-on-accent" : "bg-card text-label"}`}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ReadinessSheet({ open, onDone }: { open: boolean; onDone: (r: Readiness | null) => void }) {
+  const [sono, setSono] = useState<0 | 1 | 2 | null>(null);
+  const [energia, setEnergia] = useState<0 | 1 | 2 | null>(null);
+  const [dor, setDor] = useState<PainArea[] | null>(null);
+  const ready = sono != null && energia != null && dor != null;
+  return (
+    <Sheet open={open} onClose={() => onDone(null)} title="Como você está hoje?">
+      <div className="flex flex-col gap-4 pt-1">
+        <p className="text-[14px] leading-snug text-label-2">Três toques e eu ajusto o treino de hoje pra você.</p>
+        <Choice label="Sono" value={sono} onChange={setSono} options={[{ value: 0, label: "Dormi mal" }, { value: 1, label: "Ok" }, { value: 2, label: "Dormi bem" }]} />
+        <Choice label="Energia" value={energia} onChange={setEnergia} options={[{ value: 0, label: "Baixa" }, { value: 1, label: "Normal" }, { value: 2, label: "Alta" }]} />
+        <div className="flex flex-col gap-2">
+          <span className="text-[15px] font-semibold">Alguma dor ou desconforto?</span>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setDor([])} aria-pressed={dor?.length === 0} className={`press h-9 rounded-full px-3.5 text-[14px] font-semibold ${dor?.length === 0 ? "bg-accent text-on-accent" : "bg-card"}`}>
+              Nenhuma
+            </button>
+            {PAIN_AREAS.map((a) => {
+              const on = !!dor?.includes(a);
+              return (
+                <button key={a} aria-pressed={on} onClick={() => setDor((d) => (on ? (d ?? []).filter((x) => x !== a) : [...(d ?? []), a]))} className={`press h-9 rounded-full px-3.5 text-[14px] font-semibold ${on ? "bg-accent text-on-accent" : "bg-card"}`}>
+                  {a}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <Button size="lg" disabled={!ready} onClick={() => ready && onDone({ sono: sono!, energia: energia!, dor: dor! })}>
+          Começar treino
+        </Button>
+        <Button variant="plain" onClick={() => onDone(null)}>Pular</Button>
+      </div>
+    </Sheet>
+  );
+}
+
+function SwapSheet({ block, exclude, onClose, onPick, onSkip }: { block: Block | null; exclude: string[]; onClose: () => void; onPick: (ex: Exercise, alsoPlan: boolean) => void; onSkip: () => void }) {
+  const [catalog, setCatalog] = useState<Exercise[] | null>(null);
+  const [alsoPlan, setAlsoPlan] = useState(false);
+  useEffect(() => {
+    if (!block) return;
+    setAlsoPlan(false);
+    loadExercises().then((l) => setCatalog(l as Exercise[]));
+  }, [block]);
+  const options = block && catalog ? alternativesFor({ id: block.exerciseId, muscle_group: block.group }, catalog, exclude).slice(0, 12) : [];
+  return (
+    <Sheet open={!!block} onClose={onClose} title="Máquina ocupada?">
+      {block && (
+        <div className="flex flex-col gap-3 pt-1">
+          <p className="text-[14px] leading-snug text-label-2">
+            Troque <b className="text-label">{block.name}</b> por outro de {block.group.toLowerCase()}. A carga sugerida vem do seu histórico no exercício novo.
+          </p>
+          {!catalog ? (
+            <Spinner />
+          ) : options.length === 0 ? (
+            <p className="py-4 text-center text-[15px] text-label-2">Nenhum exercício equivalente na biblioteca.</p>
+          ) : (
+            <div className="overflow-hidden rounded-2xl bg-card">
+              {options.map((ex) => (
+                <button key={ex.id} onClick={() => onPick(ex, alsoPlan)} className="press flex w-full items-center gap-3 border-b border-sep px-4 py-3 text-left last:border-0">
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-[16px] font-medium">{ex.name}</span>
+                    <span className="text-[13px] text-label-2">{ex.equipment}</span>
+                  </div>
+                  <Icon name="swap" size={17} className="text-accent-ink" />
+                </button>
+              ))}
+            </div>
+          )}
+          <label className="flex items-center justify-between gap-3 rounded-xl bg-card px-4 py-3">
+            <span className="text-[15px]">Trocar também na minha semana</span>
+            <input type="checkbox" checked={alsoPlan} onChange={(e) => setAlsoPlan(e.target.checked)} className="h-5 w-5 accent-[var(--accent)]" />
+          </label>
+          <Button variant="danger" size="lg" onClick={onSkip}>
+            Pular este exercício hoje
+          </Button>
+        </div>
+      )}
+    </Sheet>
   );
 }

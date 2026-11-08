@@ -70,6 +70,15 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 - [x] Também dá pra descrever a refeição em texto ou contar pro chat da IA ("almocei arroz, feijão e frango") que ela registra sozinha
 - [x] Alimentos recentes com um toque e gráfico dos últimos 7 dias (Pro)
 
+**Diferenciais**
+- [x] **Importar ficha da academia**: foto da ficha de papel, do quadro ou print do app da academia → a IA transcreve e vira a sua semana (confere os dias e tira o que não quiser antes de salvar)
+- [x] **"Como você está hoje?"** antes do treino: sono, energia e dor. Num dia ruim o app tira 1 série e baixa ~10% da carga; dor no ombro/joelho/lombar/cotovelo marca os exercícios que podem incomodar
+- [x] **Máquina ocupada**: troca na hora por um exercício equivalente (mesmo músculo), com carga sugerida pelo histórico, só hoje ou também na semana; ou pula o exercício
+- [x] **Card pra story**: no fim do treino gera uma imagem 1080×1920 com volume, séries, tempo, recordes e exercícios, e abre o compartilhar do celular
+- [x] **Resumo da semana**: treinos x meta, volume vs semana anterior, recordes, séries por músculo, alimentação e peso, + sugestões da IA pra próxima semana (Pro)
+- [x] **Amigos**: link de convite e ranking semanal (treinos, volume, séries). Os amigos só veem esses totais
+- [x] **Fotos de progresso**: frente, lado e costas, com antes/depois deslizante e a diferença de peso e medidas entre as datas (Pro, armazenamento privado)
+
 **Carga Pro (assinatura)**
 - [x] Teste grátis de 7 dias, plano mensal (R$ 14,90) e anual (R$ 99,90) com pagamento pelo **Stripe**
 - [x] Grátis: 5 mensagens por mês com a IA. Pro: IA sem limite, calorias pela foto do prato, gráfico de força (1RM), evolução do ano inteiro e linha do tempo do corpo
@@ -89,6 +98,14 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 | Medidas | Peso | Assistente de IA |
 |:---:|:---:|:---:|
 | ![](docs/screenshots/medidas-light.png) | ![](docs/screenshots/peso-light.png) | ![](docs/screenshots/ia-light.png) |
+
+| Importar ficha | Dia mais leve | Máquina ocupada |
+|:---:|:---:|:---:|
+| ![](docs/screenshots/importar-ficha-light.png) | ![](docs/screenshots/dia-leve-light.png) | ![](docs/screenshots/maquina-ocupada-light.png) |
+
+| Resumo da semana | Amigos | Card pro story |
+|:---:|:---:|:---:|
+| ![](docs/screenshots/resumo-semana-light.png) | ![](docs/screenshots/amigos-light.png) | ![](docs/screenshots/story.png) |
 
 | Nutrição | Foto do prato analisada | Nutrição (escuro) |
 |:---:|:---:|:---:|
@@ -162,6 +179,7 @@ O app abre em `http://localhost:3000`.
    - `20261108000004_assinaturas.sql` → assinaturas do Pro (depois, cadastre o segredo em `private.app_secrets`, como explica o arquivo)
    - `20261108000005_ai_messages_hidden.sql` → histórico da IA
    - `20261108000006_nutricao.sql` → refeições, água e metas de nutrição
+   - `20261108000007_social_prontidao_fotos.sql` → prontidão do treino, amigos e ranking, resumo semanal e fotos de progresso
 3. Em **Authentication → URL Configuration**, configure:
    - **Site URL**: a URL do app publicado
    - **Redirect URLs**: `https://SEU-DOMINIO/auth/confirm` e `http://localhost:3000/auth/confirm`
@@ -180,6 +198,10 @@ auth.users ──┬── profiles            nome, objetivo, meta semanal
              ├── meals               alimentos por refeição e dia (kcal e macros)
              ├── water_logs          copos de água
              ├── nutrition_scans     uso da análise por foto (limite diário)
+             ├── friendships         amizades (criadas só pela função add_friend)
+             ├── progress_photos     fotos de progresso (arquivos no bucket privado "progresso")
+             ├── weekly_reports      sugestões da IA do resumo semanal
+             ├── ai_usage            uso das funções de IA com limite
              ├── subscriptions       assinatura do Pro (só o webhook escreve)
              └── ai_messages         histórico do chat com a IA
 ```
@@ -221,11 +243,17 @@ src/
 │   │   ├── evolucao/      estatísticas e gráficos
 │   │   ├── medidas/       peso, medidas e corpo anatômico
 │   │   ├── nutricao/      diário alimentar, água e metas
+│   │   ├── importar/      importar ficha da academia
+│   │   ├── resumo/        resumo da semana
+│   │   ├── amigos/        convite e ranking semanal
+│   │   ├── fotos/         fotos de progresso (antes e depois)
 │   │   ├── ia/            chat com o assistente
 │   │   └── perfil/        meta, objetivo, tema e sair
 │   ├── (focus)/treino/    treino ao vivo (tela cheia)
 │   ├── api/ia/            rota que conversa com o Claude
 │   ├── api/nutricao/      análise de foto/texto da refeição com o Claude
+│   ├── api/importar/      leitura da ficha da academia com o Claude
+│   ├── api/resumo/        sugestões da semana com o Claude
 │   └── auth/confirm/      retorno dos links de e-mail
 ├── components/            UI, corpo anatômico (Body), gráfico (LineChart), seletor de exercícios
 ├── lib/                   cliente Supabase, tipos, lógica de progressão, tema
@@ -237,7 +265,8 @@ docs/screenshots/          prints usados neste README
 ## Próximos passos
 
 - [ ] Vista de costas no mapa muscular (dorsal, glúteo, posterior de coxa)
-- [ ] Fotos de progresso com comparação lado a lado
+- [ ] Versão para personal trainer (acompanhar alunos e cobrar por aluno)
+- [ ] Notificação do resumo da semana no domingo
 - [ ] Check-in automático por localização da academia
 - [ ] Modo offline (salvar o treino sem internet e sincronizar depois)
 - [ ] Notificação quando o descanso termina com a tela bloqueada

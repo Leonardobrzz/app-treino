@@ -139,3 +139,10 @@ export function generatePlan(input: GenInput, catalog: Exercise[]): GenPlan {
   const split = days.length === 4 ? "Superiores e inferiores" : days.length === 5 ? "Empurrar, puxar, pernas + sup/inf" : days.length >= 6 ? "Empurrar, puxar, pernas" : days.length === 3 && input.level !== "iniciante" ? "Empurrar, puxar, pernas" : "Corpo inteiro";
   return { name: `${split} · ${days.length}x por semana`, days: out };
 }
+
+/** Exercícios equivalentes (mesmo grupo), na ordem de preferência — usado no "máquina ocupada" */
+export function alternativesFor(current: Pick<Exercise, "id" | "muscle_group">, catalog: Exercise[], exclude: string[] = []): Exercise[] {
+  const list = catalog.filter((e) => e.muscle_group === current.muscle_group && e.id !== current.id && !exclude.includes(e.id));
+  const pref = (PREFERRED[current.muscle_group] ?? []).map((n) => list.find((e) => norm(e.name) === norm(n))).filter(Boolean) as Exercise[];
+  return [...pref, ...list.filter((e) => !pref.includes(e))];
+}

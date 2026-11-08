@@ -79,7 +79,15 @@ export default function MeasuresPage() {
 
   return (
     <>
-      <Header title="Peso e medidas" back={{ href: "/evolucao", label: "Evolução" }} />
+      <Header
+        title="Peso e medidas"
+        back={{ href: "/evolucao", label: "Evolução" }}
+        right={
+          <Link href="/fotos" className="press mb-1 flex h-9 items-center gap-1.5 rounded-full bg-card px-3.5 text-[15px] font-semibold text-accent-ink">
+            <Icon name="image" size={17} /> Fotos
+          </Link>
+        }
+      />
       <div className="px-5 pt-2">
         <Segmented<Tab> value={tab} onChange={setTab} options={[{ value: "medidas", label: "Medidas" }, { value: "peso", label: "Peso" }]} />
       </div>

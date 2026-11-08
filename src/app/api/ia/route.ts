@@ -4,13 +4,11 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { MEASURES } from "@/lib/types";
 import { FREE_AI_MESSAGES, isPro } from "@/lib/pro";
 import { WEEKDAYS } from "@/lib/util";
+import { findOrCreate, norm, savePlan, type Ex, type PlanInput } from "@/lib/plan-save";
 import { ITEM_SCHEMA, cleanItem, computeTargets, mealForHour } from "@/lib/nutrition";
 import { MEAL_LABEL, MEAL_TYPES, type MealType } from "@/lib/types";
 
 type SB = Awaited<ReturnType<typeof supabaseServer>>;
-type Ex = { id: string; name: string; muscle_group: string; equipment: string };
-
-const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 
 const TOOLS: Anthropic.Tool[] = [
   {
@@ -112,22 +110,6 @@ const TOOLS: Anthropic.Tool[] = [
   },
 ];
 
-async function findOrCreate(sb: SB, userId: string, catalog: Ex[], name: string, group?: string) {
-  const n = norm(name);
-  let ex = catalog.find((e) => norm(e.name) === n) ?? catalog.find((e) => norm(e.name).includes(n) || n.includes(norm(e.name)));
-  if (!ex) {
-    const words = n.split(" ").filter((w) => w.length > 3);
-    ex = catalog
-      .map((e) => ({ e, score: words.filter((w) => norm(e.name).includes(w)).length }))
-      .filter((x) => x.score >= Math.max(2, words.length - 1))
-      .sort((a, b) => b.score - a.score)[0]?.e;
-  }
-  if (ex) return ex;
-  const { data } = await sb.from("exercises").insert({ name, muscle_group: group ?? "Outro", equipment: "Outro", created_by: userId }).select("id,name,muscle_group,equipment").single();
-  if (data) catalog.push(data as Ex);
-  return data as Ex;
-}
-
 async function activePlan(sb: SB) {
   const { data } = await sb.from("plans").select("id,name,plan_days(id,weekday,title,plan_exercises(id,position,sets,reps,target_weight,exercises(name)))").eq("active", true).order("created_at", { ascending: false }).limit(1).maybeSingle();
   return data as null | { id: string; name: string; plan_days: { id: string; weekday: number; title: string; plan_exercises: { id: string; position: number; sets: number; reps: string; target_weight: number | null; exercises: { name: string } }[] }[] };
@@ -135,25 +117,10 @@ async function activePlan(sb: SB) {
 
 async function runTool(sb: SB, userId: string, catalog: Ex[], name: string, input: Record<string, unknown>): Promise<string> {
   if (name === "montar_semana") {
-    const dias = (input.dias as { dia_semana: number; titulo: string; exercicios: { nome: string; grupo?: string; series: number; repeticoes: string; carga_kg?: number; descanso_s?: number; nota?: string }[] }[]) ?? [];
-    await sb.from("plans").update({ active: false }).eq("active", true);
-    const { data: plan, error } = await sb.from("plans").insert({ name: String(input.nome ?? "Minha semana") }).select("id").single();
-    if (error || !plan) return "Erro ao criar o plano.";
-    const seen = new Set<number>();
-    for (const d of dias) {
-      if (seen.has(d.dia_semana)) continue;
-      seen.add(d.dia_semana);
-      const { data: day } = await sb.from("plan_days").insert({ plan_id: plan.id, weekday: d.dia_semana, title: d.titulo }).select("id").single();
-      if (!day) continue;
-      const rows = [];
-      for (const [i, e] of d.exercicios.entries()) {
-        const ex = await findOrCreate(sb, userId, catalog, e.nome, e.grupo);
-        if (!ex) continue;
-        rows.push({ plan_day_id: day.id, exercise_id: ex.id, position: i, sets: e.series, reps: String(e.repeticoes).slice(0, 8), target_weight: e.carga_kg ?? null, rest_seconds: e.descanso_s ?? 90, notes: e.nota ?? null });
-      }
-      if (rows.length) await sb.from("plan_exercises").insert(rows);
-    }
-    return `Plano salvo com ${seen.size} dias: ${dias.map((d) => `${WEEKDAYS[d.dia_semana]} (${d.titulo})`).join(", ")}.`;
+    const input2 = input as unknown as PlanInput;
+    const r = await savePlan(sb, userId, catalog, input2);
+    if (!r.ok) return "Erro ao criar o plano.";
+    return `Plano salvo com ${r.days} dias: ${(input2.dias ?? []).map((d) => `${WEEKDAYS[d.dia_semana]} (${d.titulo})`).join(", ")}.`;
   }
   if (name === "ajustar_dia") {
     const plan = await activePlan(sb);

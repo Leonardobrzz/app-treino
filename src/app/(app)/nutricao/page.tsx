@@ -9,6 +9,7 @@ import { getProfile, getSubscription } from "@/lib/data";
 import { computeTargets, mealForHour, type FoodItem, type Targets } from "@/lib/nutrition";
 import { isPro } from "@/lib/pro";
 import { supabase } from "@/lib/supabase/client";
+import { shrinkImage as shrink } from "@/lib/image";
 import { MEAL_LABEL, MEAL_TYPES, type Meal, type MealType, type Profile, type WaterLog } from "@/lib/types";
 import { WEEKDAYS_LETTER, fmtDate, num, todayISO, vibrate } from "@/lib/util";
 
@@ -19,6 +20,7 @@ const parse = (v: string) => {
   const x = parseFloat(v.replace(",", "."));
   return Number.isFinite(x) && x >= 0 ? x : 0;
 };
+const round10 = (v: number) => Math.round(v / 10) * 10;
 const r0 = (v: number) => Math.round(v).toLocaleString("pt-BR");
 const shiftDay = (iso: string, d: number) => {
   const x = new Date(iso + "T12:00:00");
@@ -27,28 +29,6 @@ const shiftDay = (iso: string, d: number) => {
 };
 const sum = (list: Pick<Meal, "kcal" | "protein" | "carbs" | "fat">[]) =>
   list.reduce((a, m) => ({ kcal: a.kcal + Number(m.kcal), protein: a.protein + Number(m.protein), carbs: a.carbs + Number(m.carbs), fat: a.fat + Number(m.fat) }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
-
-/** Reduz a foto no próprio aparelho antes de enviar (mais rápido e barato) */
-async function shrink(file: File, max = 1024): Promise<{ data: string; preview: string }> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise<HTMLImageElement>((res, rej) => {
-      const i = new Image();
-      i.onload = () => res(i);
-      i.onerror = rej;
-      i.src = url;
-    });
-    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-    const c = document.createElement("canvas");
-    c.width = Math.round(img.naturalWidth * k);
-    c.height = Math.round(img.naturalHeight * k);
-    c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-    const preview = c.toDataURL("image/jpeg", 0.82);
-    return { data: preview.split(",")[1], preview };
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
 
 export default function NutritionPage() {
   const [loading, setLoading] = useState(true);
@@ -598,13 +578,20 @@ function AddSheet({ meal, onClose, pro, recent, onSaved, day }: { meal: MealType
               <button onClick={() => setItems((l) => [...l, emptyDraft()])} className="press flex h-10 items-center justify-center gap-1.5 text-[15px] font-semibold text-accent-ink">
                 <Icon name="plus" size={16} stroke={2.5} /> Incluir outro alimento
               </button>
-              <div className="tabular flex items-baseline justify-between rounded-xl bg-card px-4 py-3 text-[14px] text-label-2">
-                <span>
-                  <b className="text-[18px] text-label">{r0(tot.kcal)}</b> kcal
-                </span>
-                <span>
-                  P {r0(tot.protein)} · C {r0(tot.carbs)} · G {r0(tot.fat)}
-                </span>
+              <div className="tabular flex flex-col gap-1 rounded-xl bg-card px-4 py-3 text-[14px] text-label-2" data-testid="total-prato">
+                <div className="flex items-baseline justify-between">
+                  <span>
+                    Total ≈ <b className="text-[20px] text-label">{r0(tot.kcal)}</b> kcal
+                  </span>
+                  <span>
+                    P {r0(tot.protein)} · C {r0(tot.carbs)} · G {r0(tot.fat)}
+                  </span>
+                </div>
+                {tot.kcal > 0 && (
+                  <span className="text-[13px]">
+                    Pode variar entre {r0(round10(tot.kcal * (source === "foto" ? 0.85 : 0.9)))} e {r0(round10(tot.kcal * (source === "foto" ? 1.15 : 1.1)))} kcal, conforme a porção e o preparo.
+                  </span>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button variant="secondary" size="lg" onClick={() => setItems([])}>Refazer</Button>

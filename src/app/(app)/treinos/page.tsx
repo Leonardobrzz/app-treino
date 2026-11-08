@@ -57,6 +57,16 @@ export default function WeekPage() {
             </div>
             <Icon name="chevron" size={18} className="text-label-3" />
           </Link>
+          <Link href="/importar" className="press mx-5 mt-2.5 flex items-center gap-3 rounded-2xl bg-card p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
+              <Icon name="camera" size={21} />
+            </div>
+            <div className="flex flex-1 flex-col">
+              <span className="text-[16px] font-semibold">Importar ficha da academia</span>
+              <span className="text-[14px] text-label-2">Foto da ficha ou print do app da academia</span>
+            </div>
+            <Icon name="chevron" size={18} className="text-label-3" />
+          </Link>
 
           <SectionTitle>Dias</SectionTitle>
           <div className="flex flex-col gap-2.5 px-5">
