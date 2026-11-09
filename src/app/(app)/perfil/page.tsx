@@ -59,7 +59,7 @@ export default function ProfilePage() {
         </span>
         <span className="flex flex-1 flex-col">
           <span className="flex items-center gap-2 text-[16px] font-semibold">Carga <ProBadge /></span>
-          <span className="text-[13px] text-label-2">{isPro(sub) ? (sub?.status === "trialing" ? "Teste grátis ativo" : "Assinatura ativa") : "IA sem limite, gráfico de força e mais"}</span>
+          <span className="text-[13px] text-label-2">{isPro(sub) ? (sub?.status === "trialing" ? "Teste grátis ativo" : "Assinatura ativa") : "IA à vontade, foto do prato, gráfico de força e mais"}</span>
         </span>
         <Icon name="chevron" size={17} className="text-label-3" />
       </Link>

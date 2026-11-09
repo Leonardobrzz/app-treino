@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
+import { aiError } from "@/lib/ai-errors";
 import { supabaseServer } from "@/lib/supabase/server";
 import { proOf, usageOf } from "@/lib/limits";
 import { findMatch, savePlan, type Ex, type PlanInput } from "@/lib/plan-save";
@@ -115,8 +116,7 @@ ${[...new Set(catalog.map((c) => c.muscle_group))].map((g) => `${g}: ${catalog.f
     });
     out = (res.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use")?.input ?? {}) as typeof out;
   } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "A IA não respondeu agora. Tente de novo em instantes." }, { status: 502 });
+    return aiError(e, "importar ficha");
   }
   await sb.from("ai_usage").insert({ kind: "ficha" });
 

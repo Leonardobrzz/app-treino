@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { MEASURES } from "@/lib/types";
-import { FREE_AI_MESSAGES, isPro } from "@/lib/pro";
+import { FREE_AI_MESSAGES, PRO_AI_MESSAGES, isPro } from "@/lib/pro";
+import { aiError } from "@/lib/ai-errors";
 import { WEEKDAYS } from "@/lib/util";
 import { findOrCreate, norm, savePlan, type Ex, type PlanInput } from "@/lib/plan-save";
 import { ITEM_SCHEMA, cleanItem, computeTargets, mealForHour } from "@/lib/nutrition";
@@ -182,7 +183,7 @@ async function usage(sb: SB) {
   start.setDate(1);
   start.setHours(0, 0, 0, 0);
   const { count } = await sb.from("ai_messages").select("id", { count: "exact", head: true }).eq("role", "user").gte("created_at", start.toISOString());
-  return { pro, used: count ?? 0, limit: pro ? null : FREE_AI_MESSAGES };
+  return { pro, used: count ?? 0, limit: pro ? PRO_AI_MESSAGES : FREE_AI_MESSAGES };
 }
 
 export async function GET() {
@@ -212,6 +213,9 @@ export async function POST(req: NextRequest) {
   if (!u0.pro && u0.used >= FREE_AI_MESSAGES) {
     return NextResponse.json({ error: `Você usou as ${FREE_AI_MESSAGES} mensagens grátis deste mês.`, limit: true, usage: u0 }, { status: 402 });
   }
+  if (u0.pro && u0.used >= PRO_AI_MESSAGES) {
+    return NextResponse.json({ error: `Você chegou ao uso justo de ${PRO_AI_MESSAGES} mensagens neste mês. Volta no dia 1º — o resto do Pro continua liberado.`, usage: u0 }, { status: 429 });
+  }
 
   const { message } = (await req.json()) as { message?: string };
   const text = (message ?? "").trim().slice(0, 2000);
@@ -221,7 +225,7 @@ export async function POST(req: NextRequest) {
     sb.from("profiles").select("name,goal,weekly_goal,level,location,priority_muscles,session_minutes,height_cm,sex,birth_date,kcal_target,protein_target,carbs_target,fat_target,water_target_ml").eq("id", u.user.id).maybeSingle(),
     activePlan(sb),
     sb.from("ai_messages").select("role,content").eq("hidden", false).order("created_at", { ascending: false }).limit(16),
-    sb.from("exercises").select("id,name,muscle_group,equipment"),
+    sb.from("exercises").select("id,name,muscle_group,equipment,created_by").order("name"),
     sb.from("body_weights").select("measured_on,weight").order("measured_on", { ascending: false }).limit(3),
     sb.from("meals").select("meal,name,kcal,protein,carbs,fat").eq("eaten_on", todayBR()),
   ]);
@@ -238,24 +242,13 @@ Comido hoje: ${Math.round(eaten.kcal)} kcal · ${Math.round(eaten.p)} g P · ${M
         .join("\n")
     : "(sem plano ainda)";
 
+  // catálogo global em ordem fixa (vai no cache); exercícios do próprio usuário vão na parte variável
   const byGroup = new Map<string, string[]>();
-  catalog.forEach((e) => byGroup.set(e.muscle_group, [...(byGroup.get(e.muscle_group) ?? []), e.name]));
+  catalog.filter((e) => !(e as Ex & { created_by?: string | null }).created_by).forEach((e) => byGroup.set(e.muscle_group, [...(byGroup.get(e.muscle_group) ?? []), e.name]));
+  const own = catalog.filter((e) => (e as Ex & { created_by?: string | null }).created_by);
 
-  const system = `Você é o assistente de treino e alimentação do app Carga: um personal trainer brasileiro com boa base de nutrição, direto, animado e prático. Responda em português do Brasil, curto (feito para ler no celular), sem enrolação.
-
-Hoje é ${new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "America/Sao_Paulo" })}.
-
-Usuário: ${profile.data?.name ?? "sem nome"} · objetivo: ${profile.data?.goal ?? "não informado"} · meta: ${profile.data?.weekly_goal ?? 4} treinos/semana · nível: ${profile.data?.level ?? "?"} · treina em: ${profile.data?.location ?? "?"} · tempo por treino: ${profile.data?.session_minutes ?? "?"} min · músculos prioritários: ${(profile.data?.priority_muscles ?? []).join(", ") || "nenhum"}${profile.data?.height_cm ? ` · altura: ${profile.data.height_cm} cm` : ""}.
-Peso recente: ${(weight.data ?? []).map((w) => `${w.weight} kg em ${w.measured_on}`).join(", ") || "não registrado"}.
-
-Nutrição:
-${nutritionText}
-
-Plano atual:
-${planText}
-
-Catálogo de exercícios do app (use estes nomes exatos ao montar treinos):
-${[...byGroup.entries()].map(([g, l]) => `${g}: ${l.join(" | ")}`).join("\n")}
+  // parte fixa (igual pra todo mundo) → fica em cache na Anthropic e sai ~10x mais barata
+  const staticPrompt = `Você é o assistente de treino e alimentação do app Carga: um personal trainer brasileiro com boa base de nutrição, direto, animado e prático. Responda em português do Brasil, curto (feito para ler no celular), sem enrolação.
 
 Regras:
 - Quando o usuário pedir para montar/refazer a semana, monte direto com a ferramenta montar_semana (não peça confirmação se o pedido estiver claro; se faltar o essencial, como quantos dias, assuma algo razoável e diga o que assumiu). Depois resuma o plano em poucas linhas.
@@ -265,10 +258,30 @@ Regras:
 - Se o usuário contar o que comeu, registre com registrar_refeicao (estime porção e macros com a Tabela TACO) e diga quanto falta para as metas do dia.
 - Em dúvidas de alimentação, dê sugestões práticas com comida brasileira do dia a dia. Nada de dietas extremas, jejuns prolongados ou cortes radicais; se houver sinais de relação difícil com a comida, acolha e sugira um nutricionista ou profissional de saúde.
 - Não dê diagnóstico médico. Em caso de dor ou lesão, recomende procurar um profissional de saúde.
-- Não use markdown pesado: no máximo listas curtas com "-".`;
+- Não use markdown pesado: no máximo listas curtas com "-".
+
+Catálogo de exercícios do app (use estes nomes exatos ao montar treinos):
+${[...byGroup.entries()].map(([g, l]) => `${g}: ${l.join(" | ")}`).join("\n")}`;
+
+  const userPrompt = `Hoje é ${new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "America/Sao_Paulo" })}.
+
+Usuário: ${profile.data?.name ?? "sem nome"} · objetivo: ${profile.data?.goal ?? "não informado"} · meta: ${profile.data?.weekly_goal ?? 4} treinos/semana · nível: ${profile.data?.level ?? "?"} · treina em: ${profile.data?.location ?? "?"} · tempo por treino: ${profile.data?.session_minutes ?? "?"} min · músculos prioritários: ${(profile.data?.priority_muscles ?? []).join(", ") || "nenhum"}${profile.data?.height_cm ? ` · altura: ${profile.data.height_cm} cm` : ""}.
+Peso recente: ${(weight.data ?? []).map((w) => `${w.weight} kg em ${w.measured_on}`).join(", ") || "não registrado"}.
+${own.length ? `Exercícios criados pelo usuário: ${own.map((e) => `${e.name} (${e.muscle_group})`).join(" | ")}.\n` : ""}
+Nutrição:
+${nutritionText}
+
+Plano atual:
+${planText}`;
+
+  const system: Anthropic.TextBlockParam[] = [
+    { type: "text", text: staticPrompt, cache_control: { type: "ephemeral" } },
+    { type: "text", text: userPrompt },
+  ];
 
   const history = (hist.data ?? []).reverse().map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
-  const messages: Anthropic.MessageParam[] = [...history, { role: "user", content: text }];
+  // o histórico também entra no cache: nas voltas das ferramentas ele é relido de graça
+  const messages: Anthropic.MessageParam[] = [...history, { role: "user", content: [{ type: "text", text, cache_control: { type: "ephemeral" } }] }];
 
   const client = new Anthropic();
   let changed = false;
@@ -302,8 +315,7 @@ Regras:
       messages.push({ role: "user", content: results });
     }
   } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "A IA não respondeu agora. Tente de novo em instantes." }, { status: 502 });
+    return aiError(e, "chat");
   }
 
   reply ||= "Pronto!";

@@ -6,17 +6,17 @@ import { AnimatePresence, motion } from "motion/react";
 import { ProBadge } from "@/components/ProLock";
 import { Icon, Spinner, type IconName } from "@/components/ui";
 import { getSubscription } from "@/lib/data";
-import { FREE_AI_MESSAGES, PRICES, brl, isPro, type Subscription } from "@/lib/pro";
+import { FREE_AI_MESSAGES, PRO_AI_MESSAGES, PRICES, brl, isPro, type Subscription } from "@/lib/pro";
 import { fmtDate, vibrate } from "@/lib/util";
 
 const ROWS: { icon: IconName; label: string; free: string | boolean; pro: string | boolean }[] = [
   { icon: "dumbbell", label: "Registrar treinos e séries", free: true, pro: true },
   { icon: "calendar", label: "Plano automático da semana", free: true, pro: true },
   { icon: "chart", label: "Sugestão de aumento de carga", free: true, pro: true },
-  { icon: "spark", label: "Assistente de IA", free: `${FREE_AI_MESSAGES}/mês`, pro: "∞" },
+  { icon: "spark", label: "Assistente de IA", free: `${FREE_AI_MESSAGES}/mês`, pro: `${PRO_AI_MESSAGES}/mês` },
   { icon: "apple", label: "Diário de alimentação e água", free: true, pro: true },
   { icon: "camera", label: "Foto do prato → calorias e macros", free: false, pro: true },
-  { icon: "camera", label: "Importar ficha da academia por foto", free: "2/mês", pro: "∞" },
+  { icon: "camera", label: "Importar ficha da academia por foto", free: "2/mês", pro: "15/dia" },
   { icon: "spark", label: "Sugestões da IA no resumo da semana", free: false, pro: true },
   { icon: "image", label: "Fotos de progresso: antes e depois", free: false, pro: true },
   { icon: "trophy", label: "Gráfico de força (1RM) por exercício", free: false, pro: true },
@@ -89,7 +89,7 @@ export default function ProPage() {
         <h1 className="flex items-center gap-2 text-[34px] font-bold tracking-[-0.5px]">
           Carga <ProBadge className="!text-[14px] !px-2" />
         </h1>
-        <p className="mt-1 max-w-[300px] text-[17px] leading-snug text-label-2">Personal e nutri no bolso: IA sem limite, calorias pela foto do prato e a sua evolução inteira à vista.</p>
+        <p className="mt-1 max-w-[300px] text-[17px] leading-snug text-label-2">Personal e nutri no bolso: IA à vontade, calorias pela foto do prato e a sua evolução inteira à vista.</p>
       </motion.div>
 
       {sub === undefined ? (
@@ -173,7 +173,7 @@ export default function ProPage() {
                 <Icon name="trophy" size={34} />
               </motion.div>
               <h2 className="text-[26px] font-bold">Bem-vindo ao Pro!</h2>
-              <p className="mt-1 text-[15px] leading-snug text-label-2">IA sem limite, calorias pela foto, gráfico de força e a linha do tempo do corpo já estão liberados.</p>
+              <p className="mt-1 text-[15px] leading-snug text-label-2">IA à vontade, calorias pela foto, gráfico de força e a linha do tempo do corpo já estão liberados.</p>
               <button onClick={() => router.replace("/")} className="press mt-5 h-12 w-full rounded-xl bg-accent text-[16px] font-semibold text-on-accent">
                 Bora treinar
               </button>

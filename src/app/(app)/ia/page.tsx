@@ -118,7 +118,11 @@ export default function AIPage() {
         title="Assistente"
         eyebrow="TREINO E ALIMENTAÇÃO"
         right={
-          usage && !usage.pro && !msgs.length ? (
+          usage && usage.pro && usage.limit && usage.used >= usage.limit - 50 && !msgs.length ? (
+            <span className="flex h-9 items-center rounded-full bg-card px-3 text-[13px] font-semibold text-label-2">
+              <span className="tabular">{Math.max(0, usage.limit - usage.used)}</span>&nbsp;restantes
+            </span>
+          ) : usage && !usage.pro && !msgs.length ? (
             <Link href="/pro" className="press flex h-9 items-center gap-1.5 rounded-full bg-card px-3 text-[13px] font-semibold text-label-2">
               <span className="tabular">{Math.max(0, (usage.limit ?? 0) - usage.used)}/{usage.limit}</span> grátis
             </Link>
@@ -175,7 +179,7 @@ export default function AIPage() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-2 rounded-2xl bg-card p-5 text-center">
             <span className="rounded-md bg-accent px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-on-accent">PRO</span>
             <span className="text-[17px] font-semibold">Você usou as mensagens grátis deste mês</span>
-            <span className="text-[14px] leading-snug text-label-2">Com o Pro, a IA fica sem limite: monta e ajusta seus treinos quantas vezes quiser.</span>
+            <span className="text-[14px] leading-snug text-label-2">Com o Pro são 300 mensagens por mês: dá pra montar, ajustar treinos e tirar dúvidas todo dia.</span>
             <Link href="/pro" className="press mt-1 inline-flex h-11 items-center rounded-xl bg-accent px-5 text-[16px] font-semibold text-on-accent">
               Testar 7 dias grátis
             </Link>

@@ -13,6 +13,9 @@ export const isPro = (s?: Pick<Subscription, "status"> | null) => !!s && PRO_STA
 /** Mensagens com a IA por mês no plano grátis */
 export const FREE_AI_MESSAGES = 5;
 
+/** Uso justo do Pro: mensagens com a IA por mês (protege de uso abusivo/robôs) */
+export const PRO_AI_MESSAGES = 300;
+
 export const PRICES = {
   mensal: { label: "Mensal", amount: 14.9, per: "por mês" },
   anual: { label: "Anual", amount: 99.9, per: "por ano" },

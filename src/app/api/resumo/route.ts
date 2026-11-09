@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
+import { aiError } from "@/lib/ai-errors";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseServer } from "@/lib/supabase/server";
 import { proOf, usageOf } from "@/lib/limits";
@@ -56,8 +57,7 @@ export async function POST(req: NextRequest) {
     });
     text = res.content.filter((b): b is Anthropic.TextBlock => b.type === "text").map((b) => b.text).join("\n").trim();
   } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "A IA não respondeu agora. Tente de novo em instantes." }, { status: 502 });
+    return aiError(e, "resumo da semana");
   }
   if (!text) return NextResponse.json({ error: "A IA não respondeu agora." }, { status: 502 });
 

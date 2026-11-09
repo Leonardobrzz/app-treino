@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
+import { aiError } from "@/lib/ai-errors";
 import { supabaseServer } from "@/lib/supabase/server";
 import { isPro } from "@/lib/pro";
 import { DAILY_SCANS, ITEM_SCHEMA, cleanItem } from "@/lib/nutrition";
@@ -67,8 +68,7 @@ export async function POST(req: NextRequest) {
     const tool = res.content.find((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
     input = (tool?.input ?? {}) as typeof input;
   } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "A IA não respondeu agora. Tente de novo em instantes." }, { status: 502 });
+    return aiError(e, "foto do prato");
   }
 
   await sb.from("nutrition_scans").insert({ kind: image ? "foto" : "texto" });
