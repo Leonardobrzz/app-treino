@@ -2,6 +2,8 @@
 
 > Aplicativo web (PWA) para organizar a semana de treinos, registrar as séries na academia, acompanhar a progressão de carga e a evolução do corpo, com um assistente de IA que monta o treino a partir de um pedido em texto ou voz.
 
+🌐 **No ar em [carga.app.br](https://carga.app.br)**: abra no celular e adicione à tela de início.
+
 ![Telas do app](docs/screenshots/capa.png)
 
 ## Sumário
@@ -33,6 +35,15 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 - [x] Cadastro com nome, e-mail e senha
 - [x] Login
 - [x] "Esqueci minha senha" com link por e-mail e tela para criar uma senha nova
+- [x] E-mails de confirmação e de troca de senha em português, enviados pelo domínio próprio (`nao-responda@carga.app.br`, via Resend)
+- [x] Páginas de **Termos de uso** e **Política de privacidade** (LGPD), com link no cadastro, no Pro e no Perfil
+
+**Primeiros passos (instalar e aprender a usar)**
+- [x] **Guia de instalação** logo depois do cadastro: como o Carga não está na Play Store nem na App Store, o app mostra o passo a passo pra adicionar à tela de início, de acordo com o celular e o navegador (iPhone com Safari ou Chrome, Android com Chrome ou Samsung Internet)
+- [x] No Android, botão **Instalar o Carga** que abre a instalação do navegador com um toque, quando o navegador permite
+- [x] Detecta quando a pessoa abriu pelo navegador do Instagram (que não instala apps) e ensina a abrir no navegador do celular
+- [x] **Tour das funcionalidades**: 9 telas com prints reais do app explicando cada parte; aparece na primeira vez e também na primeira vez que o app instalado é aberto
+- [x] No Perfil: **Como usar o Carga** (rever o tour) e **Instalar na tela de início** (some quando o app já está instalado)
 
 **Treinos**
 - [x] Montar a própria semana: escolher o dia, dar nome ao treino e adicionar exercícios
@@ -82,19 +93,31 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 
 **Carga Pro (assinatura)**
 - [x] Teste grátis de 7 dias, plano mensal (R$ 19,90) e anual (R$ 99,90) com pagamento pelo **Stripe**
-- [x] Grátis: 5 mensagens por mês com a IA. Pro: IA sem limite, calorias pela foto do prato, gráfico de força (1RM), evolução do ano inteiro e linha do tempo do corpo
+- [x] Grátis: 5 mensagens por mês com a IA. Pro: IA à vontade (uso justo de 300 mensagens por mês), calorias pela foto do prato, importar ficha até 15 vezes por dia, gráfico de força (1RM), evolução do ano inteiro e linha do tempo do corpo
 - [x] Portal do cliente para trocar de plano, atualizar o cartão ou cancelar
 - [x] Webhook do Stripe sincroniza a assinatura com o banco automaticamente
 
 ## Telas
 
+### Primeiros passos
+
+| Instalar no iPhone | Instalar no Android | Veio do Instagram |
+|:---:|:---:|:---:|
+| ![](docs/screenshots/instalar-iphone-light.png) | ![](docs/screenshots/instalar-android-light.png) | ![](docs/screenshots/instalar-instagram-light.png) |
+
+| Tour: Hoje | Tour: treino que se adapta |
+|:---:|:---:|
+| ![](docs/screenshots/tour-light.png) | ![](docs/screenshots/tour-adapta-light.png) |
+
+### Dentro do app
+
 | Login | Hoje | Minha semana | Editar treino |
 |:---:|:---:|:---:|:---:|
 | ![](docs/screenshots/login-light.png) | ![](docs/screenshots/hoje-light.png) | ![](docs/screenshots/semana-light.png) | ![](docs/screenshots/editar-dia-light.png) |
 
-| Treino ao vivo | Calculadora de anilhas | Evolução | Perfil |
-|:---:|:---:|:---:|:---:|
-| ![](docs/screenshots/treino-ao-vivo-light.png) | ![](docs/screenshots/anilhas-light.png) | ![](docs/screenshots/evolucao-light.png) | ![](docs/screenshots/perfil-light.png) |
+| Treino ao vivo | Calculadora de anilhas | Evolução |
+|:---:|:---:|:---:|
+| ![](docs/screenshots/treino-ao-vivo-light.png) | ![](docs/screenshots/anilhas-light.png) | ![](docs/screenshots/evolucao-light.png) |
 
 | Medidas | Peso | Assistente de IA |
 |:---:|:---:|:---:|
@@ -104,9 +127,9 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 |:---:|:---:|:---:|
 | ![](docs/screenshots/importar-ficha-light.png) | ![](docs/screenshots/dia-leve-light.png) | ![](docs/screenshots/maquina-ocupada-light.png) |
 
-| Como fazer |  |  |
+| Como fazer | Termos de uso | Perfil |
 |:---:|:---:|:---:|
-| ![](docs/screenshots/como-fazer-light.png) |  |  |
+| ![](docs/screenshots/como-fazer-light.png) | ![](docs/screenshots/termos-light.png) | ![](docs/screenshots/perfil-light.png) |
 
 | Resumo da semana | Amigos | Card pro story |
 |:---:|:---:|:---:|
@@ -130,7 +153,10 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 | Estilo | Tailwind CSS 4 com variáveis de tema (claro e escuro) |
 | Animações | [Motion](https://motion.dev/) (antigo Framer Motion) |
 | Back-end | [Supabase](https://supabase.com/): autenticação e PostgreSQL com Row Level Security |
-| IA | [Claude API](https://docs.claude.com/) com *tool use* para gravar no banco |
+| IA | [Claude API](https://docs.claude.com/) com *tool use* para gravar no banco e *prompt caching*. Sonnet no Pro e em tudo que lê imagem; Haiku no chat do plano grátis (mais barato) |
+| Pagamentos | [Stripe](https://stripe.com/) (Checkout, portal do cliente e webhook) |
+| E-mail | [Resend](https://resend.com/) como SMTP do Supabase, no domínio próprio |
+| Hospedagem | [Vercel](https://vercel.com/) + domínio `carga.app.br` (Registro.br) |
 | Gráficos e corpo | SVG feito à mão (sem biblioteca) |
 
 ## Como rodar
@@ -167,7 +193,8 @@ O app abre em `http://localhost:3000`.
 | `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto no Supabase |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Chave publicável do Supabase (pode ficar no front) |
 | `ANTHROPIC_API_KEY` | Chave da API da Anthropic, usada só no servidor |
-| `ANTHROPIC_MODEL` | Modelo do Claude (padrão: `claude-sonnet-5-5`) |
+| `ANTHROPIC_MODEL` | Modelo do Claude no Pro e nas funções com imagem (padrão: `claude-sonnet-5-5`) |
+| `ANTHROPIC_MODEL_FREE` | Modelo do chat no plano grátis (padrão: `claude-haiku-5-5`) |
 | `STRIPE_SECRET_KEY` | Chave secreta do Stripe (`sk_test_...` no modo de teste) |
 | `STRIPE_WEBHOOK_SECRET` | Segredo do webhook (`whsec_...`) apontando para `/api/stripe/webhook` |
 | `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_YEARLY` | IDs dos preços do Carga Pro |
@@ -186,10 +213,12 @@ O app abre em `http://localhost:3000`.
    - `20261108000006_nutricao.sql` → refeições, água e metas de nutrição
    - `20261108000007_social_prontidao_fotos.sql` → prontidão do treino, amigos e ranking, resumo semanal e fotos de progresso
 3. Em **Authentication → URL Configuration**, configure:
-   - **Site URL**: a URL do app publicado
-   - **Redirect URLs**: `https://SEU-DOMINIO/auth/confirm` e `http://localhost:3000/auth/confirm`
+   - **Site URL**: a URL do app publicado (aqui, `https://carga.app.br`)
+   - **Redirect URLs**: `https://SEU-DOMINIO/**` e `http://localhost:3000/**`
+4. Em **Authentication → Emails → SMTP Settings**, ligue o SMTP próprio. Com o Resend: host `smtp.resend.com`, porta `465`, usuário `resend` e uma API key do Resend como senha. O domínio precisa estar verificado no Resend (registros DKIM e SPF no DNS).
+5. Em **Authentication → Emails → Templates**, use links no formato `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/` (e `type=recovery` no de senha). Assim o link funciona mesmo se a pessoa abrir o e-mail em outro aparelho ou navegador.
 
-> ⚠️ O envio de e-mail padrão do Supabase tem um limite baixo por hora. Para produção, configure um SMTP próprio em **Authentication → SMTP**.
+> ⚠️ O envio de e-mail padrão do Supabase tem um limite baixo por hora. Para produção, use um SMTP próprio, como no passo 4.
 
 ## Banco de dados
 
@@ -255,15 +284,19 @@ src/
 │   │   ├── ia/            chat com o assistente
 │   │   └── perfil/        meta, objetivo, tema e sair
 │   ├── (focus)/treino/    treino ao vivo (tela cheia)
+│   ├── (focus)/pro/       planos e assinatura
+│   ├── (intro)/           comecar (instalação + tour na primeira vez), como-usar, instalar
+│   ├── (legal)/           termos de uso e política de privacidade
 │   ├── api/ia/            rota que conversa com o Claude
 │   ├── api/nutricao/      análise de foto/texto da refeição com o Claude
 │   ├── api/importar/      leitura da ficha da academia com o Claude
 │   ├── api/resumo/        sugestões da semana com o Claude
 │   └── auth/confirm/      retorno dos links de e-mail
-├── components/            UI, corpo anatômico (Body), gráfico (LineChart), seletor de exercícios
-├── lib/                   cliente Supabase, tipos, lógica de progressão, tema
+├── components/            UI, corpo anatômico (Body), gráfico (LineChart), seletor de exercícios, guia de instalação e tour
+├── lib/                   cliente Supabase, tipos, lógica de progressão, tema, detecção de instalação (install.ts), modelos de IA (ai-models.ts)
 └── proxy.ts               protege as rotas e renova a sessão
 supabase/migrations/       SQL do banco
+public/tour/               prints do tour dentro do app
 docs/screenshots/          prints usados neste README
 ```
 
@@ -275,7 +308,8 @@ docs/screenshots/          prints usados neste README
 - [ ] Check-in automático por localização da academia
 - [ ] Modo offline (salvar o treino sem internet e sincronizar depois)
 - [ ] Notificação quando o descanso termina com a tela bloqueada
-- [ ] Versão nativa com React Native / Expo
+- [ ] Versão nativa com React Native / Expo (e publicar na Play Store e na App Store)
+- [ ] Botão de excluir conta direto no Perfil
 
 ## Créditos
 
