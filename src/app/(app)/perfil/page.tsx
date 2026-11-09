@@ -108,6 +108,8 @@ export default function ProfilePage() {
           { href: "/exercicios", icon: "dumbbell" as const, label: "Biblioteca de exercícios" },
           { href: "/ia", icon: "spark" as const, label: "Assistente de treino" },
           { href: "/bem-vindo", icon: "refresh" as const, label: "Refazer configuração inicial" },
+          { href: "/termos", icon: "help" as const, label: "Termos de uso" },
+          { href: "/privacidade", icon: "lock" as const, label: "Política de privacidade" },
         ].map((l) => (
           <Link key={l.href} href={l.href} className="press flex items-center gap-3 border-b border-sep px-4 py-3 last:border-b-0">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent-ink">

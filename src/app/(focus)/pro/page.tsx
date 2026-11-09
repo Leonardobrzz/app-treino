@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
@@ -153,6 +154,11 @@ export default function ProPage() {
               </motion.button>
               <p className="mt-2 text-center text-[13px] leading-snug text-label-2">
                 {sub?.trial_used ? "Cancele quando quiser." : `Sem cobrança nos 7 primeiros dias. Depois, ${brl(PRICES[plan].amount)} ${PRICES[plan].per}. Cancele quando quiser.`}
+              </p>
+              <p className="mt-1 text-center text-[12px] leading-snug text-label-3">
+                Ao assinar, você concorda com os{" "}
+                <Link href="/termos" className="text-accent-ink">Termos de uso</Link> e a{" "}
+                <Link href="/privacidade" className="text-accent-ink">Política de privacidade</Link>.
               </p>
               {process.env.NEXT_PUBLIC_STRIPE_TEST === "1" && (
                 <p className="mt-3 rounded-xl bg-card p-3 text-center text-[13px] leading-snug text-label-2">

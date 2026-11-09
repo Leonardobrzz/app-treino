@@ -58,6 +58,11 @@ export default function SignUpPage() {
         <Button size="lg" type="submit" disabled={loading}>
           {loading ? "Criando…" : "Criar conta"}
         </Button>
+        <p className="text-center text-[13px] leading-snug text-label-2">
+          Ao criar sua conta, você concorda com os{" "}
+          <Link href="/termos" className="font-semibold text-accent-ink">Termos de uso</Link> e a{" "}
+          <Link href="/privacidade" className="font-semibold text-accent-ink">Política de privacidade</Link>.
+        </p>
       </form>
       <p className="mt-auto pt-10 text-center text-[15px] text-label-2">
         Já tem conta?{" "}
