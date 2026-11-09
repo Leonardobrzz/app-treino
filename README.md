@@ -81,7 +81,7 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 - [x] **Fotos de progresso**: frente, lado e costas, com antes/depois deslizante e a diferença de peso e medidas entre as datas (Pro, armazenamento privado)
 
 **Carga Pro (assinatura)**
-- [x] Teste grátis de 7 dias, plano mensal (R$ 14,90) e anual (R$ 99,90) com pagamento pelo **Stripe**
+- [x] Teste grátis de 7 dias, plano mensal (R$ 19,90) e anual (R$ 99,90) com pagamento pelo **Stripe**
 - [x] Grátis: 5 mensagens por mês com a IA. Pro: IA sem limite, calorias pela foto do prato, gráfico de força (1RM), evolução do ano inteiro e linha do tempo do corpo
 - [x] Portal do cliente para trocar de plano, atualizar o cartão ou cancelar
 - [x] Webhook do Stripe sincroniza a assinatura com o banco automaticamente
