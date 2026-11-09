@@ -140,3 +140,10 @@ input[type="number"] {
 .theme-anim * {
   transition: background-color 350ms ease, color 350ms ease, border-color 350ms ease !important;
 }
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

@@ -48,6 +48,14 @@ const PATHS = {
   users: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21c1-4 3.5-6 7-6s6 2 7 6M16 3.6a4 4 0 0 1 0 7.3M18 15.2c2 .7 3.3 2.6 4 5.8",
   link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
   image: "M4 5h16v14H4zM4 16l5-5 4 4 3-3 4 4M15.5 9.5h.01",
+  share: "M12 3v12M8 7l4-4 4 4M7 10H5v11h14V10h-2",
+  plusSquare: "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM12 8v8M8 12h8",
+  kebab: "M12 5h.01M12 12h.01M12 19h.01",
+  menu: "M4 7h16M4 12h16M4 17h16",
+  download: "M12 4v11M7 10l5 5 5-5M5 20h14",
+  phone: "M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2",
+  copy: "M9 9h11v11H9zM5 15H4V4h11v1",
+  compass: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15.5 8.5l-2 5-5 2 2-5z",
 } as const;
 
 export type IconName = keyof typeof PATHS;

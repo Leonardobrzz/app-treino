@@ -9,6 +9,7 @@ import { getProfile, getSubscription } from "@/lib/data";
 import { isPro, type Subscription } from "@/lib/pro";
 import { supabase } from "@/lib/supabase/client";
 import { getTheme, setTheme, type Theme } from "@/lib/theme";
+import { isStandalone } from "@/lib/install";
 import type { Profile } from "@/lib/types";
 import { vibrate } from "@/lib/util";
 
@@ -20,9 +21,11 @@ export default function ProfilePage() {
   const [email, setEmail] = useState("");
   const [theme, setThemeState] = useState<Theme>("system");
   const [sub, setSub] = useState<Subscription | null>(null);
+  const [installed, setInstalled] = useState(true);
 
   useEffect(() => {
     setThemeState(getTheme());
+    setInstalled(isStandalone());
     getProfile().then(setP);
     getSubscription().then(setSub);
     supabase().auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
@@ -108,6 +111,8 @@ export default function ProfilePage() {
           { href: "/exercicios", icon: "dumbbell" as const, label: "Biblioteca de exercícios" },
           { href: "/ia", icon: "spark" as const, label: "Assistente de treino" },
           { href: "/bem-vindo", icon: "refresh" as const, label: "Refazer configuração inicial" },
+          { href: "/como-usar", icon: "compass" as const, label: "Como usar o Carga" },
+          ...(installed ? [] : [{ href: "/instalar", icon: "download" as const, label: "Instalar na tela de início" }]),
           { href: "/termos", icon: "help" as const, label: "Termos de uso" },
           { href: "/privacidade", icon: "lock" as const, label: "Política de privacidade" },
         ].map((l) => (

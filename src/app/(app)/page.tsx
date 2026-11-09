@@ -1,5 +1,6 @@
 "use client";
 
+import { introSeen, isStandalone } from "@/lib/install";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -38,6 +39,11 @@ export default function TodayPage() {
       ]);
       if (p && !p.onboarded_at) {
         router.replace("/bem-vindo");
+        return;
+      }
+      // Primeira vez abrindo pelo app instalado: mostra o tour uma vez.
+      if (isStandalone() && !introSeen()) {
+        router.replace("/comecar?next=/");
         return;
       }
       try {

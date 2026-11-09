@@ -1,5 +1,6 @@
 "use client";
 
+import { introSeen } from "@/lib/install";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
@@ -170,7 +171,8 @@ export default function Onboarding() {
         if (day) await sb.from("plan_exercises").insert(d.exercises.map((e, i) => ({ plan_day_id: day.id, exercise_id: e.exercise.id, position: i, sets: e.sets, reps: e.reps, rest_seconds: Math.max(15, e.rest) })));
       }
     }
-    router.replace(usePlan ? "/treinos" : "/");
+    const target = usePlan ? "/treinos" : "/";
+    router.replace(introSeen() ? target : `/comecar?next=${encodeURIComponent(target)}`);
     router.refresh();
   }
 
