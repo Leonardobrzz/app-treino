@@ -1,3 +1,4 @@
+import { MODEL_PRO } from "@/lib/ai-models";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { aiError } from "@/lib/ai-errors";
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
   let input: { e_comida?: boolean; itens?: Record<string, unknown>[]; observacao?: string } = {};
   try {
     const res = await new Anthropic().messages.create({
-      model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
+      model: MODEL_PRO,
       max_tokens: 1500,
       system: SYSTEM,
       tools: [TOOL],

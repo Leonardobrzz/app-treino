@@ -1,3 +1,4 @@
+import { chatModel } from "@/lib/ai-models";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -290,7 +291,7 @@ ${planText}`;
   try {
     for (let i = 0; i < 6; i++) {
       const res = await client.messages.create({
-        model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
+        model: chatModel(u0.pro),
         max_tokens: 4000,
         system,
         tools: TOOLS,

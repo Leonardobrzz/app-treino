@@ -1,3 +1,4 @@
+import { MODEL_PRO } from "@/lib/ai-models";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { aiError } from "@/lib/ai-errors";
@@ -107,7 +108,7 @@ ${[...new Set(catalog.map((c) => c.muscle_group))].map((g) => `${g}: ${catalog.f
   let out: { e_ficha?: boolean; nome?: string; dias?: PlanInput["dias"]; aviso?: string } = {};
   try {
     const res = await new Anthropic().messages.create({
-      model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
+      model: MODEL_PRO,
       max_tokens: 6000,
       system,
       tools: [TOOL],

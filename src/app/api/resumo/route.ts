@@ -1,3 +1,4 @@
+import { MODEL_PRO } from "@/lib/ai-models";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { aiError } from "@/lib/ai-errors";
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
   let text = "";
   try {
     const res = await new Anthropic().messages.create({
-      model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
+      model: MODEL_PRO,
       max_tokens: 700,
       system: `Você é o personal trainer do app Carga. Com base nos números da semana do aluno, escreva de 3 a 5 sugestões práticas e específicas para a PRÓXIMA semana, em português do Brasil.
 - Comece cada linha com "- " e seja curto (no máximo 2 frases por linha).
