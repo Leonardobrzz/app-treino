@@ -115,13 +115,13 @@ export default function ProPage() {
           )}
 
           <div className="mt-6 overflow-hidden rounded-2xl bg-card">
-            <div className="grid grid-cols-[minmax(0,1fr)_56px_56px] items-center gap-2 border-b border-sep px-4 py-2.5 text-[12px] font-bold tracking-wide text-label-2">
+            <div className="grid grid-cols-[minmax(0,1fr)_52px_68px] items-center gap-2 border-b border-sep px-4 py-2.5 text-[12px] font-bold tracking-wide text-label-2">
               <span />
               <span className="text-center">GRÁTIS</span>
               <span className="text-center text-accent-ink">PRO</span>
             </div>
             {ROWS.map((r, i) => (
-              <motion.div key={r.label} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }} className="grid grid-cols-[minmax(0,1fr)_56px_56px] items-center gap-2 border-b border-sep px-4 py-3 last:border-b-0">
+              <motion.div key={r.label} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }} className="grid grid-cols-[minmax(0,1fr)_52px_68px] items-center gap-2 border-b border-sep px-4 py-3 last:border-b-0">
                 <span className="flex items-center gap-3 text-[15px]">
                   <Icon name={r.icon} size={19} className="shrink-0 text-label-2" />
                   {r.label}
@@ -194,5 +194,5 @@ export default function ProPage() {
 function Cell({ v, pro }: { v: string | boolean; pro?: boolean }) {
   if (v === true) return <span className={`flex justify-center ${pro ? "text-accent-ink" : "text-label-2"}`}><Icon name="check" size={18} stroke={3} /></span>;
   if (v === false) return <span className="text-center text-label-3">—</span>;
-  return <span className={`tabular text-center text-[14px] font-bold ${pro ? "text-[18px] text-accent-ink" : "text-label-2"}`}>{v}</span>;
+  return <span className={`tabular whitespace-nowrap text-center font-bold ${pro ? "text-[16px] text-accent-ink" : "text-[14px] text-label-2"}`}>{v}</span>;
 }

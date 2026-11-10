@@ -16,9 +16,9 @@ import type { Exercise, SessionSet } from "@/lib/types";
 import { epley, fmtDate, mmss, num, repRange, suggest, todayISO, vibrate } from "@/lib/util";
 
 type SetRow = { id?: string; set_number: number; weight: string; reps: string; done: boolean };
-type Block = { peId: string; exerciseId: string; name: string; equipment: string; group: string; reps: string; rest: number; notes: string | null; prev: SessionSet[]; sug: ReturnType<typeof suggest>; sets: SetRow[]; plannedSets: number; pain: PainArea | null };
+type Block = { peId: string; exerciseId: string; name: string; equipment: string; group: string; reps: string; rest: number; notes: string | null; prev: SessionSet[]; sug: ReturnType<typeof suggest>; sets: SetRow[]; plannedSets: number; pain: PainArea | null; later?: boolean };
 
-type SessionMeta = { readiness: Readiness | null; swaps: Record<string, string>; skipped: string[] };
+type SessionMeta = { readiness: Readiness | null; swaps: Record<string, string>; skipped: string[]; later?: string[] };
 const w2s = (w: number) => (w ? String(w).replace(".", ",") : "");
 
 /** Aplica o "como você está hoje" nas séries que ainda não foram feitas */
@@ -86,7 +86,7 @@ export default function LiveWorkout() {
       setAskReady(true);
     }
     setSessionId(sid ?? null);
-    meta.current = { readiness: saved.readiness ?? null, swaps: saved.swaps ?? {}, skipped: saved.skipped ?? [] };
+    meta.current = { readiness: saved.readiness ?? null, swaps: saved.swaps ?? {}, skipped: saved.skipped ?? [], later: saved.later ?? [] };
 
     // exercícios trocados nesta sessão ("máquina ocupada")
     const swapIds = Object.values(meta.current.swaps);
@@ -112,8 +112,14 @@ export default function LiveWorkout() {
       });
       return { peId: pe.id, exerciseId: ex.id, name: ex.name, equipment: ex.equipment, group: ex.muscle_group, reps: pe.reps, rest: pe.rest_seconds, notes: pe.notes, prev, sug, sets, plannedSets: pe.sets, pain: null };
     });
+    // exercícios deixados "pra depois" (máquina ocupada) vão pro fim, na ordem em que foram adiados
+    const later = meta.current.later ?? [];
+    const ordered = [
+      ...built.filter((b) => !later.includes(b.peId)),
+      ...later.map((id) => built.find((b) => b.peId === id)).filter((b): b is Block => !!b).map((b) => ({ ...b, later: true })),
+    ];
     setReadiness(meta.current.readiness);
-    setBlocks(applyReadiness(built, meta.current.readiness));
+    setBlocks(applyReadiness(ordered, meta.current.readiness));
   }, [dayId, router]);
 
   async function saveMeta(patch: Partial<SessionMeta>) {
@@ -159,6 +165,16 @@ export default function LiveWorkout() {
       ),
     );
     if (!alsoPlan) saveMeta({ swaps: { ...meta.current.swaps, [b.peId]: ex.id } });
+    vibrate(12);
+  }
+
+  // máquina ocupada: manda o exercício pro fim do treino e faz quando liberar
+  function doLater(bi: number) {
+    const b = blocks[bi];
+    if (!b) return;
+    setSwapIdx(null);
+    setBlocks((bs) => [...bs.filter((_, i) => i !== bi), { ...bs[bi], later: true }]);
+    saveMeta({ later: [...(meta.current.later ?? []).filter((id) => id !== b.peId), b.peId] });
     vibrate(12);
   }
 
@@ -330,7 +346,10 @@ export default function LiveWorkout() {
           <motion.section key={b.peId} layout className={`rounded-[20px] bg-card p-4 transition-shadow ${bi === currentIdx ? "ring-2 ring-accent/60" : ""}`}>
             <div className="flex items-start justify-between gap-2">
               <div className="flex flex-col">
-                <span className="text-[12px] font-semibold uppercase tracking-wide text-label-2">{b.group}</span>
+                <span className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-wide text-label-2">
+                  {b.group}
+                  {b.later && <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold normal-case tracking-normal text-accent-ink">Deixado pra depois</span>}
+                </span>
                 <h2 className="text-[20px] font-bold leading-tight">{b.name}</h2>
                 <span className="text-[14px] text-label-2">Meta: {b.sets.length} × {b.reps}</span>
                 <button onClick={() => setGuide({ name: b.name, muscle_group: b.group, equipment: b.equipment })} className="mt-1 flex items-center gap-1 self-start text-[14px] font-semibold text-accent-ink">
@@ -472,6 +491,7 @@ export default function LiveWorkout() {
         onClose={() => setSwapIdx(null)}
         onPick={(ex, alsoPlan) => swapIdx != null && swapTo(swapIdx, ex, alsoPlan)}
         onSkip={() => swapIdx != null && skip(swapIdx)}
+        onLater={() => swapIdx != null && doLater(swapIdx)}
       />
 
       <AnimatePresence>
@@ -565,7 +585,7 @@ function ReadinessSheet({ open, onDone }: { open: boolean; onDone: (r: Readiness
   );
 }
 
-function SwapSheet({ block, exclude, onClose, onPick, onSkip }: { block: Block | null; exclude: string[]; onClose: () => void; onPick: (ex: Exercise, alsoPlan: boolean) => void; onSkip: () => void }) {
+function SwapSheet({ block, exclude, onClose, onPick, onSkip, onLater }: { block: Block | null; exclude: string[]; onClose: () => void; onPick: (ex: Exercise, alsoPlan: boolean) => void; onSkip: () => void; onLater: () => void }) {
   const [catalog, setCatalog] = useState<Exercise[] | null>(null);
   const [alsoPlan, setAlsoPlan] = useState(false);
   useEffect(() => {
@@ -602,6 +622,9 @@ function SwapSheet({ block, exclude, onClose, onPick, onSkip }: { block: Block |
             <span className="text-[15px]">Trocar também na minha semana</span>
             <input type="checkbox" checked={alsoPlan} onChange={(e) => setAlsoPlan(e.target.checked)} className="h-5 w-5 accent-[var(--accent)]" />
           </label>
+          <Button variant="secondary" size="lg" onClick={onLater}>
+            Fazer depois: vai pro fim do treino
+          </Button>
           <Button variant="danger" size="lg" onClick={onSkip}>
             Pular este exercício hoje
           </Button>
