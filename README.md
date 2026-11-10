@@ -97,6 +97,12 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 - [x] Portal do cliente para trocar de plano, atualizar o cartão ou cancelar
 - [x] Webhook do Stripe sincroniza a assinatura com o banco automaticamente
 
+**Painel do dono (/admin)**
+- [x] Só abre para os e-mails cadastrados em `private.app_admins` (os números vêm de funções do banco que recusam qualquer outro usuário)
+- [x] Usuários (total, na semana, hoje), receita por mês, quem treinou nos últimos 7 dias e custo estimado da IA no mês
+- [x] Gráfico de cadastros dos últimos 30 dias, planos (grátis, teste, mensal, anual, cancelando, atrasado) e o funil do cadastro ao pagamento
+- [x] Lista de usuários com busca e filtro por plano, último acesso, treinos e avisos ("não confirmou o e-mail", "não terminou a configuração")
+
 ## Telas
 
 ### Primeiros passos
@@ -212,6 +218,7 @@ O app abre em `http://localhost:3000`.
    - `20261108000005_ai_messages_hidden.sql` → histórico da IA
    - `20261108000006_nutricao.sql` → refeições, água e metas de nutrição
    - `20261108000007_social_prontidao_fotos.sql` → prontidão do treino, amigos e ranking, resumo semanal e fotos de progresso
+   - `20261110000008_painel_admin.sql` → painel do dono (troque os e-mails da lista `private.app_admins` pelos seus)
 3. Em **Authentication → URL Configuration**, configure:
    - **Site URL**: a URL do app publicado (aqui, `https://carga.app.br`)
    - **Redirect URLs**: `https://SEU-DOMINIO/**` e `http://localhost:3000/**`
@@ -282,6 +289,7 @@ src/
 │   │   ├── amigos/        convite e ranking semanal
 │   │   ├── fotos/         fotos de progresso (antes e depois)
 │   │   ├── ia/            chat com o assistente
+│   │   ├── admin/         painel do dono (números do app)
 │   │   └── perfil/        meta, objetivo, tema e sair
 │   ├── (focus)/treino/    treino ao vivo (tela cheia)
 │   ├── (focus)/pro/       planos e assinatura

@@ -22,10 +22,12 @@ export default function ProfilePage() {
   const [theme, setThemeState] = useState<Theme>("system");
   const [sub, setSub] = useState<Subscription | null>(null);
   const [installed, setInstalled] = useState(true);
+  const [admin, setAdmin] = useState(false);
 
   useEffect(() => {
     setThemeState(getTheme());
     setInstalled(isStandalone());
+    supabase().rpc("is_admin").then(({ data }) => setAdmin(!!data));
     getProfile().then(setP);
     getSubscription().then(setSub);
     supabase().auth.getUser().then(({ data }) => setEmail(data.user?.email ?? ""));
@@ -107,6 +109,7 @@ export default function ProfilePage() {
 
       <Card className="mx-5 mt-4 overflow-hidden">
         {[
+          ...(admin ? [{ href: "/admin", icon: "chart" as const, label: "Painel do dono" }] : []),
           { href: "/medidas", icon: "ruler" as const, label: "Peso e medidas" },
           { href: "/exercicios", icon: "dumbbell" as const, label: "Biblioteca de exercícios" },
           { href: "/ia", icon: "spark" as const, label: "Assistente de treino" },
