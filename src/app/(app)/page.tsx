@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Card, Empty, Icon, LinkButton, SectionTitle, Spinner } from "@/components/ui";
 import { CountUp, Stagger, StaggerItem } from "@/components/motion";
+import { Checklist } from "@/components/guide";
 import { myTrainers } from "@/lib/personal";
 import { refreshPush } from "@/lib/push";
 import { checkInToday, getActivePlan, getProfile, lastSetsByExercise, type ActivePlan } from "@/lib/data";
@@ -26,10 +27,12 @@ export default function TodayPage() {
   const [checkins, setCheckins] = useState<string[]>([]);
   const [last, setLast] = useState<Record<string, SessionSet[]>>({});
   const [dateLabel, setDateLabel] = useState("");
+  const [installed, setInstalled] = useState(true);
   const [food, setFood] = useState<{ kcal: number; water: number; weight: number | null }>({ kcal: 0, water: 0, weight: null });
 
   useEffect(() => {
     setDateLabel(longToday());
+    setInstalled(isStandalone());
     (async () => {
       const since = new Date();
       since.setDate(since.getDate() - 7 * 60);
@@ -113,6 +116,21 @@ export default function TodayPage() {
     .map((pe) => ({ pe, s: suggest(last[pe.exercise_id] ?? [], pe.reps, pe.sets, pe.exercises.equipment) }))
     .filter((x) => x.s?.up);
 
+
+  const coachCard = (coach: { name: string; todo: number }) => (
+    <Link href="/meu-personal" className={`press mx-5 mt-3 flex items-center gap-3 rounded-2xl p-3.5 ${coach.todo ? "bg-accent-soft" : "bg-card"}`}>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
+                <Icon name="users" size={20} />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-[15px] font-semibold">Personal: {coach.name}</span>
+                <span className="text-[13px] text-label-2">{coach.todo ? `${coach.todo} ${coach.todo === 1 ? "pendência" : "pendências"} (pagamento ou anamnese)` : "Avaliações, pagamentos e desafios"}</span>
+              </span>
+              {coach.todo > 0 && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
+              <Icon name="chevron" size={17} className="text-label-3" />
+            </Link>
+  );
+
   async function doCheckIn() {
     vibrate([10, 40, 10]);
     setCheckins((c) => [...c, todayISO()]);
@@ -147,58 +165,20 @@ export default function TodayPage() {
         <Spinner />
       ) : (
         <Stagger delay={0.06}>
-          <StaggerItem className="grid grid-cols-2 gap-3 px-5 pt-3">
-            <Card className="flex flex-col gap-1.5 px-4 py-3.5">
-              <span className="flex items-center gap-1.5 text-[13px] font-semibold text-accent-ink">
-                <Icon name="flame" size={18} />
-                Sequência
-              </span>
-              <span className="tabular text-[28px] font-bold tracking-[-0.4px]">
-                <CountUp value={streak} /> <span className="text-[15px] font-medium text-label-2">{streak === 1 ? "semana" : "semanas"}</span>
-              </span>
-            </Card>
-            <Card className="flex flex-col gap-1.5 px-4 py-3.5">
-              <span className="text-[13px] font-semibold text-label-2">Meta da semana</span>
-              <span className="tabular text-[28px] font-bold tracking-[-0.4px]">
-                <CountUp value={doneThisWeek} />
-                <span className="text-[15px] font-medium text-label-2"> de {goal}</span>
-              </span>
-              <div className="h-1.5 overflow-hidden rounded-full bg-fill">
-                <motion.div className="h-full rounded-full bg-accent" initial={{ width: 0 }} animate={{ width: `${Math.min(100, (doneThisWeek / goal) * 100)}%` }} transition={{ type: "spring", stiffness: 120, damping: 20, delay: 0.15 }} />
-              </div>
-            </Card>
+          <StaggerItem>
+            <Checklist
+              id="aluno"
+              title="Comece a usar o Carga"
+              steps={[
+                { label: "Monte sua semana", sub: "Escolha os dias e os exercícios, ou peça pra IA montar.", done: !!plan?.plan_days.length, href: "/treinos" },
+                { label: "Faça o primeiro treino", sub: "Abra o treino do dia e marque as séries com a carga que usou.", done: sessionDates.length > 0, href: todayDay ? `/treino/${todayDay.id}` : "/treinos" },
+                { label: "Registre seu peso", sub: "Assim o app calcula suas metas de comida e mostra sua evolução.", done: food.weight != null, href: "/medidas" },
+                { label: "Instale o app no celular", sub: "Fica na tela de início e abre como um app normal.", done: installed, href: "/instalar" },
+              ]}
+            />
           </StaggerItem>
 
-          <StaggerItem>
-          <Card className="mx-5 mt-3 flex justify-between px-3 py-3.5">
-            {weekDays.map((d) => (
-              <div key={d.i} className="flex w-10 flex-col items-center gap-2">
-                <span className="text-[12px] font-medium text-label-2">{WEEKDAYS_LETTER[d.i]}</span>
-                <motion.div
-                  initial={{ scale: 0.6, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: d.i * 0.04, type: "spring", stiffness: 500, damping: 25 }}
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-[14px] font-bold ${d.done ? "bg-accent text-on-accent" : d.today ? "text-accent-ink ring-2 ring-accent" : "bg-card-2 text-label-3"}`}
-                >
-                  {d.done ? <Icon name="check" size={16} stroke={3} /> : d.date}
-                </motion.div>
-              </div>
-            ))}
-          </Card>
-          {coach && (
-            <Link href="/meu-personal" className="press mx-5 mt-3 flex items-center gap-3 rounded-2xl bg-card p-3.5">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
-                <Icon name="users" size={20} />
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-[15px] font-semibold">Personal: {coach.name}</span>
-                <span className="text-[13px] text-label-2">{coach.todo ? `${coach.todo} ${coach.todo === 1 ? "pendência" : "pendências"} (pagamento ou anamnese)` : "Avaliações, pagamentos e desafios"}</span>
-              </span>
-              {coach.todo > 0 && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
-              <Icon name="chevron" size={17} className="text-label-3" />
-            </Link>
-          )}
-          </StaggerItem>
+          {coach && coach.todo > 0 && <StaggerItem>{coachCard(coach)}</StaggerItem>}
 
           <StaggerItem>
           <SectionTitle action={<Link href="/treinos" className="text-[15px] text-accent-ink">Minha semana</Link>}>Treino de hoje</SectionTitle>
@@ -248,7 +228,7 @@ export default function TodayPage() {
                     </li>
                   );
                 })}
-                {todayDay.plan_exercises.length > 5 && <li className="border-t border-sep pt-2.5 text-[15px] text-label-2">+ {todayDay.plan_exercises.length - 5} exercícios</li>}
+                {todayDay.plan_exercises.length > 5 && <li className="border-t border-sep pt-2.5 text-[15px] text-label-2">+ {todayDay.plan_exercises.length - 5} {todayDay.plan_exercises.length - 5 === 1 ? "exercício" : "exercícios"}</li>}
               </ul>
               <LinkButton href={`/treino/${todayDay.id}`}>
                 <Icon name="play" size={18} /> Iniciar treino
@@ -302,6 +282,40 @@ export default function TodayPage() {
             </Link>
           )}
 
+          </StaggerItem>
+
+          <StaggerItem>
+          <Card className="mx-5 mt-4 flex flex-col gap-3 px-4 pb-3.5 pt-3.5">
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex flex-col">
+                <span className="text-[13px] font-semibold text-label-2">Meta da semana</span>
+                <span className="tabular text-[22px] font-bold tracking-[-0.3px]">
+                  <CountUp value={doneThisWeek} />
+                  <span className="text-[15px] font-medium text-label-2"> de {goal} treinos</span>
+                </span>
+              </span>
+              <span className="flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-[14px] font-semibold text-accent-ink">
+                <Icon name="flame" size={17} />
+                <CountUp value={streak} /> {streak === 1 ? "semana" : "semanas"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+            {weekDays.map((d) => (
+              <div key={d.i} className="flex w-10 flex-col items-center gap-2">
+                <span className="text-[12px] font-medium text-label-2">{WEEKDAYS_LETTER[d.i]}</span>
+                <motion.div
+                  initial={{ scale: 0.6, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: d.i * 0.04, type: "spring", stiffness: 500, damping: 25 }}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-[14px] font-bold ${d.done ? "bg-accent text-on-accent" : d.today ? "text-accent-ink ring-2 ring-accent" : "bg-card-2 text-label-3"}`}
+                >
+                  {d.done ? <Icon name="check" size={16} stroke={3} /> : d.date}
+                </motion.div>
+              </div>
+            ))}
+            </div>
+          </Card>
+          {coach && !coach.todo && coachCard(coach)}
           </StaggerItem>
 
           <StaggerItem>

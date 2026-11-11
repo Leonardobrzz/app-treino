@@ -1,5 +1,6 @@
 "use client";
 
+import { Tip } from "@/components/guide";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
@@ -23,14 +24,19 @@ import { supabase } from "@/lib/supabase/client";
 const TABS = [
   ["resumo", "Resumo"],
   ["treino", "Treino"],
-  ["dieta", "Alimentação"],
-  ["diario", "Diário"],
   ["avaliacao", "Avaliação"],
-  ["anamnese", "Anamnese"],
-  ["fotos", "Fotos"],
   ["financeiro", "Financeiro"],
 ] as const;
 type Tab = (typeof TABS)[number][0];
+type Sub = "geral" | "diario" | "ficha" | "dieta" | "fisica" | "anamnese" | "fotos";
+const SUBS: Partial<Record<Tab, { value: Sub; label: string }[]>> = {
+  resumo: [{ value: "geral", label: "Visão geral" }, { value: "diario", label: "Diário alimentar" }],
+  treino: [{ value: "ficha", label: "Treino" }, { value: "dieta", label: "Alimentação" }],
+  avaliacao: [{ value: "fisica", label: "Física" }, { value: "anamnese", label: "Anamnese" }, { value: "fotos", label: "Fotos" }],
+};
+// Links antigos (?aba=anamnese etc.) continuam funcionando
+const OLD: Record<string, [Tab, Sub?]> = { diario: ["resumo", "diario"], dieta: ["treino", "dieta"], anamnese: ["avaliacao", "anamnese"], fotos: ["avaliacao", "fotos"] };
+const FIRST: Record<Tab, Sub | undefined> = { resumo: "geral", treino: "ficha", avaliacao: "fisica", financeiro: undefined };
 
 export default function StudentPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +44,7 @@ export default function StudentPage() {
   const me = useTrainer();
   const [d, setD] = useState<StudentDetail | null>(null);
   const [tab, setTab] = useState<Tab>("resumo");
+  const [sub, setSub] = useState<Sub | undefined>("geral");
   const [error, setError] = useState("");
   const [ending, setEnding] = useState(false);
   const [claim, setClaim] = useState<string | null>(null);
@@ -53,8 +60,18 @@ export default function StudentPage() {
   }, [id]);
 
   useEffect(() => {
-    const a = new URLSearchParams(location.search).get("aba") as Tab | null;
-    if (a && TABS.some((t) => t[0] === a)) setTab(a);
+    const q = new URLSearchParams(location.search);
+    const a = q.get("aba") ?? "";
+    const old = OLD[a];
+    if (old) {
+      setTab(old[0]);
+      setSub(old[1]);
+    } else if (TABS.some((t) => t[0] === a)) {
+      const t = a as Tab;
+      const v = q.get("ver") as Sub | null;
+      setTab(t);
+      setSub(v && SUBS[t]?.some((o) => o.value === v) ? v : FIRST[t]);
+    }
   }, []);
   useEffect(() => {
     if (!me) return;
@@ -69,9 +86,10 @@ export default function StudentPage() {
     load();
   }
 
-  function pick(t: Tab) {
+  function pick(t: Tab, v: Sub | undefined = FIRST[t]) {
     setTab(t);
-    history.replaceState(null, "", `?aba=${t}`);
+    setSub(v);
+    history.replaceState(null, "", `?aba=${t}${v && v !== FIRST[t] ? `&ver=${v}` : ""}`);
   }
 
   async function end() {
@@ -111,6 +129,7 @@ export default function StudentPage() {
         )}
       </header>
       <PersonalNav />
+      <Tip id="p-aluno" className="pt-1">Tudo do aluno fica em 4 abas: Resumo, Treino, Avaliação e Financeiro. O botão verde no topo manda mensagem pronta no WhatsApp.</Tip>
       {claim && d && me?.trainer_code && (
         <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mx-5 mb-2 flex flex-col gap-2.5 rounded-2xl bg-accent-soft p-3.5">
           <span className="text-[14px] font-medium leading-snug">
@@ -129,9 +148,9 @@ export default function StudentPage() {
           </div>
         </motion.div>
       )}
-      <div role="tablist" className="no-scrollbar flex gap-1 overflow-x-auto border-b border-sep px-5">
+      <div role="tablist" className="grid grid-cols-4 border-b border-sep px-3">
         {TABS.map(([k, l]) => (
-          <button key={k} role="tab" aria-selected={tab === k} onClick={() => pick(k)} className={`relative h-11 shrink-0 px-2.5 text-[15px] ${tab === k ? "font-semibold text-label" : "font-medium text-label-2"}`}>
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => pick(k)} className={`relative h-11 px-1 text-[15px] ${tab === k ? "font-semibold text-label" : "font-medium text-label-2"}`}>
             {l}
             {tab === k && <motion.span layoutId="stab" className="absolute inset-x-1 bottom-0 h-[3px] rounded-full bg-accent" />}
           </button>
@@ -142,14 +161,19 @@ export default function StudentPage() {
         <Spinner />
       ) : (
         <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.18 }}>
-            {tab === "resumo" && <StudentSummary d={d} onSaved={load} />}
-            {tab === "treino" && <PlanEditor d={d} onSent={load} trainer={brand} />}
-            {tab === "dieta" && <DietTab d={d} trainer={brand} />}
-            {tab === "diario" && <MealsTab d={d} />}
-            {tab === "avaliacao" && <AssessmentsTab d={d} />}
-            {tab === "anamnese" && <AnamneseTab d={d} guest={!!claim} />}
-            {tab === "fotos" && <PhotosTab d={d} onSaved={load} />}
+          <motion.div key={tab + (sub ?? "")} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.18 }}>
+            {SUBS[tab] && (
+              <div className="px-5 pb-1 pt-3">
+                <Segmented<Sub> value={sub ?? FIRST[tab]!} onChange={(v) => pick(tab, v)} options={SUBS[tab]!} />
+              </div>
+            )}
+            {sub === "geral" && <StudentSummary d={d} onSaved={load} />}
+            {sub === "diario" && <MealsTab d={d} />}
+            {sub === "ficha" && <PlanEditor d={d} onSent={load} trainer={brand} />}
+            {sub === "dieta" && <DietTab d={d} trainer={brand} />}
+            {sub === "fisica" && <AssessmentsTab d={d} />}
+            {sub === "anamnese" && <AnamneseTab d={d} guest={!!claim} />}
+            {sub === "fotos" && <PhotosTab d={d} onSaved={load} />}
             {tab === "financeiro" && <FinanceTab d={d} onSaved={load} pix={me?.pix_key ? { key: me.pix_key, name: me.pix_name ?? me.name ?? "Personal", city: me.trainer_city ?? null } : null} />}
           </motion.div>
         </AnimatePresence>

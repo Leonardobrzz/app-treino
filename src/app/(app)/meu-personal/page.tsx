@@ -1,5 +1,6 @@
 "use client";
 
+import { Tip } from "@/components/guide";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
@@ -115,6 +116,7 @@ export default function MyTrainer() {
     <>
       <Confetti active={party} />
       <Header title="Meu personal" back={{ href: "/perfil", label: "Perfil" }} />
+      <Tip id="meu-personal">Aqui fica tudo que seu personal manda: anamnese pra responder, mensalidade com Pix, aulas, desafios e avaliações.</Tip>
       {error && <p role="alert" className="mx-5 mt-1 rounded-xl bg-card px-4 py-3 text-[15px] font-medium text-bad">{error}</p>}
       {!list || !data ? (
         <Spinner />

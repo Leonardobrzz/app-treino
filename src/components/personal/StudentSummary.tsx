@@ -132,7 +132,7 @@ export function StudentSummary({ d, onSaved }: { d: StudentDetail; onSaved: () =
 
       <SectionTitle>Últimos treinos</SectionTitle>
       {d.sessions.length === 0 ? (
-        <p className="mx-5 rounded-2xl bg-card p-4 text-[15px] text-label-2">Nenhum treino registrado ainda.</p>
+        <p className="mx-5 rounded-2xl bg-card p-4 text-[15px] text-label-2">Nenhum treino registrado ainda. Envie um treino na aba Treino: ele aparece no app do aluno na hora.</p>
       ) : (
         <Card className="mx-5 overflow-hidden">
           {d.sessions.slice(0, 12).map((s) => (

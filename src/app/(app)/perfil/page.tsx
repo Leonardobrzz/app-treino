@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Card, Header, Icon, Segmented, Spinner } from "@/components/ui";
+import { Card, Header, Icon, Segmented, Spinner, type IconName } from "@/components/ui";
 import { ProBadge } from "@/components/ProLock";
 import { getProfile, getSubscription } from "@/lib/data";
 import { isPro, type Subscription } from "@/lib/pro";
@@ -69,19 +69,6 @@ export default function ProfilePage() {
         <Icon name="chevron" size={17} className="text-label-3" />
       </Link>
 
-      <h2 className="px-5 pb-2 pt-7 text-[13px] font-semibold text-label-2">APARÊNCIA</h2>
-      <div className="px-5">
-        <Segmented<Theme>
-          value={theme}
-          onChange={(t) => {
-            setThemeState(t);
-            setTheme(t);
-            vibrate(8);
-          }}
-          options={[{ value: "system", label: "Automático" }, { value: "light", label: "Claro" }, { value: "dark", label: "Escuro" }]}
-        />
-      </div>
-
       <h2 className="px-5 pb-2 pt-7 text-[13px] font-semibold text-label-2">TREINO</h2>
       <Card className="mx-5 overflow-hidden">
         <div className="flex items-center justify-between border-b border-sep px-4 py-3">
@@ -107,32 +94,64 @@ export default function ProfilePage() {
         </div>
       </Card>
 
-      <Card className="mx-5 mt-4 overflow-hidden">
-        {[
-          ...(admin ? [{ href: "/admin", icon: "chart" as const, label: "Painel do dono" }] : []),
-          { href: p.is_trainer ? "/personal" : "/personal/comecar", icon: "clipboard" as const, label: p.is_trainer ? "Área do personal" : "Sou personal trainer" },
-          { href: "/meu-personal", icon: "users" as const, label: "Meu personal" },
-          { href: "/avisos", icon: "bell" as const, label: "Avisos e notificações" },
-          { href: "/medidas", icon: "ruler" as const, label: "Peso e medidas" },
-          { href: "/exercicios", icon: "dumbbell" as const, label: "Biblioteca de exercícios" },
-          { href: "/ia", icon: "spark" as const, label: "Assistente de treino" },
-          { href: "/bem-vindo", icon: "refresh" as const, label: "Refazer configuração inicial" },
-          { href: "/como-usar", icon: "compass" as const, label: "Como usar o Carga" },
-          ...(installed ? [] : [{ href: "/instalar", icon: "download" as const, label: "Instalar na tela de início" }]),
-          { href: "/termos", icon: "help" as const, label: "Termos de uso" },
-          { href: "/privacidade", icon: "lock" as const, label: "Política de privacidade" },
-        ].map((l) => (
-          <Link key={l.href} href={l.href} className="press flex items-center gap-3 border-b border-sep px-4 py-3 last:border-b-0">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent-ink">
-              <Icon name={l.icon} size={18} />
-            </span>
-            <span className="flex-1 text-[16px]">{l.label}</span>
-            <Icon name="chevron" size={17} className="text-label-3" />
-          </Link>
-        ))}
-      </Card>
+      {(
+        [
+          ["PERSONAL", [
+            { href: "/meu-personal", icon: "users", label: "Meu personal", sub: "Treinos, avaliações e pagamentos" },
+            { href: p.is_trainer ? "/personal" : "/personal/comecar", icon: "clipboard", label: p.is_trainer ? "Área do personal" : "Sou personal trainer", sub: p.is_trainer ? "Seus alunos, agenda e cobranças" : "Acompanhe e cobre seus alunos" },
+          ]],
+          ["MEU PROGRESSO", [
+            { href: "/medidas", icon: "ruler", label: "Peso e medidas" },
+            { href: "/exercicios", icon: "dumbbell", label: "Biblioteca de exercícios" },
+            { href: "/ia", icon: "spark", label: "Assistente de treino" },
+            { href: "/avisos", icon: "bell", label: "Avisos e notificações" },
+          ]],
+          ["AJUDA", [
+            { href: "/ajuda", icon: "help", label: "Como usar o Carga", sub: "Passo a passo e dúvidas comuns" },
+            { href: "/como-usar", icon: "compass", label: "Ver a apresentação de novo" },
+            ...(installed ? [] : [{ href: "/instalar", icon: "download", label: "Instalar na tela de início" }]),
+            { href: "/bem-vindo", icon: "refresh", label: "Refazer configuração inicial" },
+          ]],
+          ["CONTA", [
+            ...(admin ? [{ href: "/admin", icon: "chart", label: "Painel do dono" }] : []),
+            { href: "/termos", icon: "lock", label: "Termos de uso" },
+            { href: "/privacidade", icon: "lock", label: "Política de privacidade" },
+          ]],
+        ] as [string, { href: string; icon: IconName; label: string; sub?: string }[]][]
+      ).map(([title, items]) => (
+        <section key={title}>
+          <h2 className="px-5 pb-2 pt-7 text-[13px] font-semibold text-label-2">{title}</h2>
+          <Card className="mx-5 overflow-hidden">
+            {items.map((l) => (
+              <Link key={l.href} href={l.href} className="press flex items-center gap-3 border-b border-sep px-4 py-3 last:border-b-0">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent-ink">
+                  <Icon name={l.icon} size={18} />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-[16px]">{l.label}</span>
+                  {l.sub && <span className="truncate text-[13px] text-label-2">{l.sub}</span>}
+                </span>
+                <Icon name="chevron" size={17} className="text-label-3" />
+              </Link>
+            ))}
+          </Card>
+        </section>
+      ))}
 
-      <button onClick={logout} className="press mx-5 mt-4 flex h-12 w-[calc(100%-40px)] items-center justify-center gap-2 rounded-2xl bg-card text-[16px] font-semibold text-bad">
+      <h2 className="px-5 pb-2 pt-7 text-[13px] font-semibold text-label-2">APARÊNCIA</h2>
+      <div className="px-5">
+        <Segmented<Theme>
+          value={theme}
+          onChange={(t) => {
+            setThemeState(t);
+            setTheme(t);
+            vibrate(8);
+          }}
+          options={[{ value: "system", label: "Automático" }, { value: "light", label: "Claro" }, { value: "dark", label: "Escuro" }]}
+        />
+      </div>
+
+      <button onClick={logout} className="press mx-5 mt-7 flex h-12 w-[calc(100%-40px)] items-center justify-center gap-2 rounded-2xl bg-card text-[16px] font-semibold text-bad">
         <Icon name="logout" size={18} /> Sair da conta
       </button>
     </>

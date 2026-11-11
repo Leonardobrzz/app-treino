@@ -64,7 +64,7 @@ export default function Notifications() {
       {!list ? (
         <Spinner />
       ) : list.length === 0 ? (
-        <p className="mx-5 mt-4 rounded-2xl bg-card p-5 text-center text-[15px] text-label-2">Nenhum aviso por enquanto.</p>
+        <p className="mx-5 mt-4 rounded-2xl bg-card p-5 text-center text-[15px] text-label-2">Nenhum aviso por enquanto. Treinos, cobranças e aulas do personal e os lembretes do app aparecem aqui.</p>
       ) : (
         <div className="mx-5 mt-3 flex flex-col gap-2">
           <AnimatePresence initial>

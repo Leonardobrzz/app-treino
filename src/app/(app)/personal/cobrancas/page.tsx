@@ -1,5 +1,6 @@
 "use client";
 
+import { Tip } from "@/components/guide";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CountUp } from "@/components/motion";
@@ -56,6 +57,7 @@ export default function Charges() {
     <>
       <PHeader title="Cobranças" />
       <PersonalNav />
+      <Tip id="p-cobrancas" className="pt-1">Defina a mensalidade na aba Financeiro de cada aluno e o Carga cria a cobrança todo mês sozinho. O Pix cai direto na sua chave.</Tip>
       {me && !me.pix_key && (
         <Link href="/personal/perfil" className="press mx-5 mt-2 flex items-center gap-3 rounded-2xl bg-accent-soft p-4">
           <Icon name="pix" size={22} className="text-accent-ink" />

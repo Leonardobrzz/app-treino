@@ -1,5 +1,6 @@
 "use client";
 
+import { Tip } from "@/components/guide";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Icon, Segmented, Sheet, Spinner } from "@/components/ui";
@@ -62,6 +63,7 @@ export default function Students() {
     <>
       <PHeader title="Alunos" sub={rows ? `${rows.length} ${rows.length === 1 ? "aluno ativo" : "alunos ativos"}` : undefined} />
       <PersonalNav />
+      <Tip id="p-alunos" className="pt-1">Toque num aluno pra ver tudo dele. Se ele ainda não tem o app, cadastre mesmo assim: quando entrar pelo link, recebe tudo.</Tip>
 
       <Card className="mx-5 mt-2 flex items-center gap-3 p-3.5">
         <div className="flex min-w-0 flex-1 flex-col">
@@ -93,7 +95,7 @@ export default function Students() {
       {!rows ? (
         <Spinner />
       ) : shown.length === 0 ? (
-        <p className="mx-5 mt-4 rounded-2xl bg-card p-4 text-[15px] text-label-2">{rows.length ? "Ninguém com esse nome." : "Nenhum aluno ainda. Mande o convite acima."}</p>
+        <p className="mx-5 mt-4 rounded-2xl bg-card p-4 text-[15px] text-label-2">{rows.length ? "Ninguém com esse nome." : "Nenhum aluno ainda. Mande o convite ou cadastre um aluno sem app, aqui em cima."}</p>
       ) : (
         <Card className="mx-5 mt-3 overflow-hidden">
           {shown.map((r) => {

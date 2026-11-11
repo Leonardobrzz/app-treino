@@ -1,5 +1,6 @@
 "use client";
 
+import { Tip } from "@/components/guide";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -43,6 +44,7 @@ export default function WeekPage() {
           </Link>
         }
       />
+      <Tip id="treinos">Toque num dia pra montar ou editar os exercícios. Dia sem treino é descanso. Na lupa você acha qualquer exercício.</Tip>
       {loading ? (
         <Spinner />
       ) : (

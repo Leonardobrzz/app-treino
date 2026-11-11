@@ -10,31 +10,60 @@ import { getProfile } from "@/lib/data";
 import { TEMPLATES, waLink } from "@/lib/personal";
 import type { Profile } from "@/lib/types";
 
-const TABS: { href: string; label: string; icon: IconName }[] = [
-  { href: "/personal", label: "Painel", icon: "home" },
-  { href: "/personal/alunos", label: "Alunos", icon: "users" },
-  { href: "/personal/agenda", label: "Agenda", icon: "calendar" },
-  { href: "/personal/cobrancas", label: "Cobranças", icon: "pix" },
-  { href: "/personal/desafios", label: "Desafios", icon: "trophy" },
-  { href: "/personal/relatorios", label: "Relatórios", icon: "download" },
-  { href: "/personal/perfil", label: "Perfil", icon: "user" },
+const MAIN: { href: string; label: string }[] = [
+  { href: "/personal", label: "Painel" },
+  { href: "/personal/alunos", label: "Alunos" },
+  { href: "/personal/agenda", label: "Agenda" },
+];
+const MORE: { href: string; label: string; sub: string; icon: IconName }[] = [
+  { href: "/personal/cobrancas", label: "Cobranças", sub: "Mensalidades do mês, Pix e comprovantes", icon: "pix" },
+  { href: "/personal/desafios", label: "Desafios", sub: "Ranking entre seus alunos", icon: "trophy" },
+  { href: "/personal/relatorios", label: "Relatórios", sub: "PDF do mês de cada aluno", icon: "download" },
+  { href: "/personal/perfil", label: "Meu perfil", sub: "CREF, Pix, WhatsApp e vitrine", icon: "user" },
+  { href: "/ajuda?p=personal", label: "Como usar", sub: "Passo a passo da área do personal", icon: "help" },
 ];
 
 export function PersonalNav() {
   const path = usePathname();
+  const [more, setMore] = useState(false);
   const on = (h: string) => (h === "/personal" ? path === h : path.startsWith(h) || (h === "/personal/alunos" && path.startsWith("/personal/aluno/")));
+  const cur = MORE.find((m) => on(m.href));
+  const chip = (active: boolean) => `press relative flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[15px] font-semibold ${active ? "text-on-accent" : "bg-card text-label-2"}`;
+  const pill = <motion.span layoutId="pnav" className="absolute inset-0 rounded-full bg-accent" transition={{ type: "spring", stiffness: 500, damping: 36 }} />;
   return (
-    <nav aria-label="Área do personal" className="no-scrollbar sticky top-0 z-30 -mt-1 flex gap-1.5 overflow-x-auto bg-bg/90 px-5 py-2 backdrop-blur-xl">
-      {TABS.map((t) => (
-        <Link key={t.href} href={t.href} aria-current={on(t.href) ? "page" : undefined} className={`press relative flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[14px] font-semibold ${on(t.href) ? "text-on-accent" : "bg-card text-label-2"}`}>
-          {on(t.href) && <motion.span layoutId="pnav" className="absolute inset-0 rounded-full bg-accent" transition={{ type: "spring", stiffness: 500, damping: 36 }} />}
-          <span className="relative flex items-center gap-1.5">
-            <Icon name={t.icon} size={16} />
-            {t.label}
+    <>
+      <nav aria-label="Área do personal" className="no-scrollbar sticky top-0 z-30 -mt-1 flex gap-1.5 overflow-x-auto bg-bg/90 px-5 py-2 backdrop-blur-xl">
+        {MAIN.map((t) => (
+          <Link key={t.href} href={t.href} aria-current={on(t.href) ? "page" : undefined} className={chip(on(t.href))}>
+            {on(t.href) && pill}
+            <span className="relative">{t.label}</span>
+          </Link>
+        ))}
+        <button onClick={() => setMore(true)} aria-current={cur ? "page" : undefined} className={chip(!!cur)}>
+          {cur && pill}
+          <span className="relative flex items-center gap-1">
+            {cur?.label ?? "Mais"}
+            {!cur && <Icon name="chevron" size={14} className="rotate-90" />}
           </span>
-        </Link>
-      ))}
-    </nav>
+        </button>
+      </nav>
+      <Sheet open={more} onClose={() => setMore(false)} title="Mais">
+        <div className="flex flex-col overflow-hidden rounded-2xl bg-card">
+          {MORE.map((m) => (
+            <Link key={m.href} href={m.href} onClick={() => setMore(false)} className="press flex items-center gap-3 border-b border-sep px-4 py-3 last:border-b-0">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
+                <Icon name={m.icon} size={18} />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[16px] font-semibold">{m.label}</span>
+                <span className="truncate text-[13px] text-label-2">{m.sub}</span>
+              </span>
+              <Icon name="chevron" size={16} className="text-label-3" />
+            </Link>
+          ))}
+        </div>
+      </Sheet>
+    </>
   );
 }
 

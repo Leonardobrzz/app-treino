@@ -34,7 +34,10 @@ export default function Reports() {
       {!rows ? (
         <Spinner />
       ) : rows.length === 0 ? (
-        <p className="mx-5 mt-4 rounded-2xl bg-card p-4 text-[15px] text-label-2">Nenhum aluno ainda.</p>
+        <p className="mx-5 mt-4 rounded-2xl bg-card p-4 text-[15px] text-label-2">
+          Os relatórios aparecem quando você tiver alunos.{" "}
+          <Link href="/personal/alunos" className="font-semibold text-accent-ink">Colocar o primeiro aluno</Link>
+        </p>
       ) : (
         <Card className="mx-5 mt-3 overflow-hidden">
           {rows.map((r, i) => (

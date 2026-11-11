@@ -1,5 +1,6 @@
 "use client";
 
+import { Tip } from "@/components/guide";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Avatar } from "@/components/PostCard";
@@ -85,6 +86,7 @@ export default function Agenda() {
         }
       />
       <PersonalNav />
+      <Tip id="p-agenda" className="pt-1">Toque no + pra marcar uma aula. O aluno recebe aviso no celular, e de novo se você remarcar ou cancelar.</Tip>
       <div className="mx-5 mt-2 flex items-center justify-between">
         <button onClick={() => shift(-1)} aria-label="Semana anterior" className="press flex h-10 w-10 items-center justify-center rounded-full bg-card">
           <Icon name="back" size={20} />

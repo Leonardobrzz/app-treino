@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { CountUp, Stagger, StaggerItem } from "@/components/motion";
 import { Card, Icon, SectionTitle, Spinner } from "@/components/ui";
 import { PHeader, Pill, PersonalNav, QuickMessage, StudentLine, useTrainer } from "@/components/personal/common";
-import { brl, daysSince, guestMap, trainerDashboard, type Appointment, type Charge, type DashRow, type Guest } from "@/lib/personal";
+import { Checklist, NextStep } from "@/components/guide";
+import { TEMPLATES, waLink, brl, daysSince, guestMap, trainerDashboard, type Appointment, type Charge, type DashRow, type Guest } from "@/lib/personal";
 import { supabase } from "@/lib/supabase/client";
 import { todayISO } from "@/lib/util";
 
@@ -19,6 +20,7 @@ export default function TrainerHome() {
   const [today, setToday] = useState<(Appointment & { name: string })[]>([]);
   const [error, setError] = useState("");
   const [guests, setGuests] = useState<Map<string, Guest>>(new Map());
+  const [onb, setOnb] = useState<{ sent_plan: boolean; assessed: boolean; charged: boolean; anamnese: boolean } | null>(null);
 
   useEffect(() => {
     if (!me) return;
@@ -28,6 +30,7 @@ export default function TrainerHome() {
     const d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
     const d1 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
     guestMap().then(setGuests);
+    supabase().rpc("trainer_onboarding").then(({ data }) => setOnb(Array.isArray(data) ? data[0] : data));
     Promise.all([
       trainerDashboard(),
       supabase().from("charges").select("*").eq("trainer_id", me.id).gte("due_on", m0).lte("due_on", m1).neq("status", "cancelada"),
@@ -83,21 +86,31 @@ export default function TrainerHome() {
     return { attention, good };
   }, [rows, guests]);
 
-  const link = typeof window !== "undefined" && me?.trainer_code ? `${location.origin}/convite-personal/${me.trainer_code}` : "";
+  const next = useMemo(() => {
+    if (!rows) return null;
+    const now = Date.now();
+    const owe = rows.find((r) => r.overdue_charges > 0);
+    if (owe)
+      return { icon: "pix" as const, eyebrow: "Próximo passo", title: `Cobrar ${owe.name.split(" ")[0]}`, text: "A mensalidade está atrasada. Mande um lembrete com o Pix.", action: { label: "Mandar no WhatsApp", href: waLink(owe.phone, TEMPLATES.cobranca(owe.name, owe.fee ? brl(Number(owe.fee)) : undefined)), external: true } };
+    const aula = today.find((a) => a.status !== "feita" && new Date(a.starts_at).getTime() > now - 30 * 60e3);
+    if (aula)
+      return { icon: "calendar" as const, eyebrow: "Hoje", title: `Aula com ${aula.name.split(" ")[0]} às ${new Date(aula.starts_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`, text: aula.note ?? `${aula.minutes} min`, action: { label: "Abrir agenda", href: "/personal/agenda" } };
+    const gone = rows
+      .filter((r) => !guests.has(r.student_id))
+      .map((r) => ({ r, d: daysSince(r.last_workout ?? r.since) ?? 0 }))
+      .sort((a, b) => b.d - a.d)[0];
+    if (gone && gone.d >= 7)
+      return { icon: "chat" as const, eyebrow: "Próximo passo", title: `Chamar ${gone.r.name.split(" ")[0]} de volta`, text: gone.r.last_workout ? `Está há ${gone.d} dias sem treinar.` : "Ainda não fez nenhum treino no app.", action: { label: "Mandar no WhatsApp", href: waLink(gone.r.phone, TEMPLATES.sumido(gone.r.name)), external: true } };
+    const ending = rows.find((r) => r.plan_ends_on && (new Date(r.plan_ends_on + "T12:00:00").getTime() - now) / 864e5 <= 7);
+    if (ending)
+      return { icon: "refresh" as const, eyebrow: "Próximo passo", title: `Renovar o plano de ${ending.name.split(" ")[0]}`, text: "O plano acaba nos próximos dias.", action: { label: "Mandar no WhatsApp", href: waLink(ending.phone, TEMPLATES.renovacao(ending.name)), external: true } };
+    const noEval = rows.find((r) => !r.last_assessment);
+    if (noEval) return { icon: "body" as const, eyebrow: "Próximo passo", title: `Avaliar ${noEval.name.split(" ")[0]}`, text: "Sem avaliação física ainda. Ela vira a base pra comparar a evolução.", action: { label: "Fazer avaliação", href: `/personal/aluno/${noEval.student_id}?aba=avaliacao` } };
+    return null;
+  }, [rows, today, guests]);
 
-  async function share() {
-    const text = `Bora treinar comigo no Carga! Entra pelo meu link pra receber seus treinos e acompanhar sua evolução 💪`;
-    const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
-    if (nav.share) {
-      try {
-        await nav.share({ title: "Carga", text, url: link });
-        return;
-      } catch {
-        /* cancelou */
-      }
-    }
-    await navigator.clipboard?.writeText(link).catch(() => {});
-  }
+  const first = rows?.[0]?.student_id;
+  const toStudent = (aba: string) => (first ? `/personal/aluno/${first}?aba=${aba}` : "/personal/alunos");
 
   return (
     <>
@@ -116,33 +129,28 @@ export default function TrainerHome() {
         <Spinner />
       ) : (
         <Stagger delay={0.05}>
-          <StaggerItem className="mx-5 mt-2 grid grid-cols-2 gap-3">
-            {[
-              ["Alunos ativos", stats.active, (v: number) => String(Math.round(v)), `${stats.trained} ${stats.trained === 1 ? "treinou" : "treinaram"} na semana`],
-              ["Recebido no mês", stats.paid, (v: number) => brl(v), `${brl(stats.open)} a receber`],
-            ].map(([l, v, f, foot]) => (
-              <Card key={l as string} className="flex flex-col gap-1 px-4 py-3.5">
-                <span className="text-[13px] font-semibold text-label-2">{l as string}</span>
-                <CountUp value={v as number} format={f as (v: number) => string} className="text-[24px] font-bold tracking-[-0.4px]" />
-                <span className="text-[12px] font-semibold text-label-2">{foot as string}</span>
-              </Card>
-            ))}
-          </StaggerItem>
-
-          {rows.length === 0 && (
+          {next && (
             <StaggerItem>
-              <Card className="mx-5 mt-4 flex flex-col gap-3 p-5">
-                <span className="text-[18px] font-bold">Chame seus alunos</span>
-                <span className="text-[15px] leading-snug text-label-2">Mande seu link. Quando o aluno entrar, ele aparece aqui e você já pode mandar anamnese, treino e cobrança.</span>
-                <code className="truncate rounded-xl bg-card-2 px-3 py-2 text-[13px] text-label-2">{link}</code>
-                <button onClick={share} className="press flex h-11 items-center justify-center gap-2 rounded-xl bg-accent text-[16px] font-semibold text-on-accent">
-                  <Icon name="send" size={17} /> Enviar convite
-                </button>
-              </Card>
+              <NextStep {...next} />
+            </StaggerItem>
+          )}
+          {me && onb && (
+            <StaggerItem>
+              <Checklist
+                id="personal"
+                title="Monte sua área"
+                steps={[
+                  { label: "Complete seu perfil", sub: "CREF e chave Pix aparecem pros alunos, nos PDFs e nas cobranças.", done: !!(me.cref && me.pix_key), href: "/personal/perfil" },
+                  { label: "Coloque seu primeiro aluno", sub: "Mande seu link ou cadastre um aluno que ainda não tem o app.", done: rows.length > 0, href: "/personal/alunos" },
+                  { label: "Faça uma avaliação física", sub: "Dobras, medidas e fotos de postura. Vira a base da evolução.", done: onb.assessed, href: toStudent("avaliacao") },
+                  { label: "Envie um treino", sub: "Monte na mão, no automático ou com a IA, e mande pro aluno.", done: onb.sent_plan, href: toStudent("treino") },
+                  { label: "Crie uma cobrança", sub: "Defina a mensalidade. O Pix cai direto na sua chave.", done: onb.charged, href: toStudent("financeiro") },
+                ]}
+              />
             </StaggerItem>
           )}
 
-          {today.length > 0 && (
+          {today.length > 0 && !(next?.eyebrow === "Hoje" && today.length === 1) && (
             <StaggerItem>
               <SectionTitle action={<Link href="/personal/agenda" className="text-[15px] text-accent-ink">Agenda</Link>}>Hoje</SectionTitle>
               <Card className="mx-5 overflow-hidden">
@@ -178,6 +186,19 @@ export default function TrainerHome() {
               </Card>
             </StaggerItem>
           )}
+
+          <StaggerItem className="mx-5 mt-4 grid grid-cols-2 gap-3">
+            {[
+              ["Alunos ativos", stats.active, (v: number) => String(Math.round(v)), `${stats.trained} ${stats.trained === 1 ? "treinou" : "treinaram"} na semana`],
+              ["Recebido no mês", stats.paid, (v: number) => brl(v), `${brl(stats.open)} a receber`],
+            ].map(([l, v, f, foot]) => (
+              <Card key={l as string} className="flex flex-col gap-1 px-4 py-3.5">
+                <span className="text-[13px] font-semibold text-label-2">{l as string}</span>
+                <CountUp value={v as number} format={f as (v: number) => string} className="text-[24px] font-bold tracking-[-0.4px]" />
+                <span className="text-[12px] font-semibold text-label-2">{foot as string}</span>
+              </Card>
+            ))}
+          </StaggerItem>
 
           {good.length > 0 && (
             <StaggerItem>

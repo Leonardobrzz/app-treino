@@ -1,5 +1,6 @@
 "use client";
 
+import { Tip } from "@/components/guide";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
@@ -105,6 +106,7 @@ export default function NutritionPage() {
           </button>
         }
       />
+      <Tip id="nutricao">Anote cada refeição com uma foto do prato ou descrevendo o que comeu. Em Metas você ajusta calorias, proteína e água.</Tip>
 
       <div className="flex items-center justify-between px-5 pb-1 pt-1">
         <button aria-label="Dia anterior" onClick={() => setDay((d) => shiftDay(d, -1))} className="press flex h-9 w-9 items-center justify-center rounded-full bg-card text-accent-ink">

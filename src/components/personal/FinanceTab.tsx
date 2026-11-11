@@ -79,7 +79,10 @@ export function FinanceTab({ d, onSaved, pix }: { d: StudentDetail; onSaved: () 
       {!list ? (
         <Spinner />
       ) : list.length === 0 ? (
-        <p className="mx-5 rounded-2xl bg-card p-4 text-[15px] text-label-2">Nenhuma cobrança ainda.</p>
+        <div className="mx-5 flex flex-col items-start gap-2 rounded-2xl bg-card p-4">
+          <p className="text-[15px] leading-snug text-label-2">Nenhuma cobrança ainda. Com mensalidade e dia salvos acima, o Carga cria uma por mês. Pra cobrar algo avulso, crie agora.</p>
+          <button onClick={() => (setAmount(fee), setCreating(true))} className="press h-9 rounded-full bg-accent-soft px-3.5 text-[14px] font-semibold text-accent-ink">Criar cobrança</button>
+        </div>
       ) : (
         <>
           {open > 0 && <p className="mx-5 mb-2 text-[14px] text-label-2">Em aberto: <b className="text-label">{brl(open)}</b></p>}

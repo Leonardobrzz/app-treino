@@ -1,5 +1,6 @@
 "use client";
 
+import { Tip } from "@/components/guide";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -332,6 +333,7 @@ export default function LiveWorkout() {
         </div>
       </div>
 
+      <Tip id="treino" className="pt-3 -mb-2">Ajuste a carga se precisar e toque no ✓ de cada série quando terminar. No fim, toque em Finalizar pra salvar.</Tip>
       <div className="flex flex-col gap-3 px-4 pt-4">
         {readiness && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className={`flex items-start gap-3 rounded-[18px] p-4 ${dayMode(readiness) === "leve" ? "bg-card" : dayMode(readiness) === "forte" ? "bg-good-soft" : "bg-card"}`} data-testid="modo-dia">

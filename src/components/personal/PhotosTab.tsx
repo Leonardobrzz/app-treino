@@ -144,7 +144,7 @@ export function PhotosTab({ d, onSaved }: { d: StudentDetail; onSaved: () => voi
       </div>
 
       {byDate.length === 0 ? (
-        <p className="mx-5 mt-4 rounded-2xl bg-card p-4 text-[15px] text-label-2">O aluno ainda não tirou fotos de progresso. As fotos da avaliação postural ficam na aba Avaliação.</p>
+        <p className="mx-5 mt-4 rounded-2xl bg-card p-4 text-[15px] text-label-2">Nenhuma foto de progresso ainda. Tire as primeiras no botão acima: frente, lado e costas, sempre no mesmo lugar e com a mesma luz.</p>
       ) : (
         byDate.map(([date, list]) => (
           <div key={date}>
