@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { Button, Icon } from "@/components/ui";
 import { Pill } from "./common";
-import { brl, dateBR, signed, type Charge } from "@/lib/personal";
+import { brl, dateBR, pixCode, pixMessage, signed, waLink, type Charge } from "@/lib/personal";
 import { pushNow } from "@/lib/push";
 import { supabase } from "@/lib/supabase/client";
 import { todayISO, vibrate } from "@/lib/util";
@@ -18,7 +18,9 @@ export function chargeTone(c: Charge) {
 }
 
 /** Linha de cobrança do lado do personal (marcar paga, ver comprovante, cancelar) */
-export function ChargeRow({ c, name, onChange }: { c: Charge; name?: string; onChange: (c: Charge) => void }) {
+export type PixInfo = { key: string; name: string; city: string | null } | null;
+
+export function ChargeRow({ c, name, onChange, pix, phone, student }: { c: Charge; name?: string; onChange: (c: Charge) => void; pix?: PixInfo; phone?: string | null; student?: string }) {
   const [open, setOpen] = useState(false);
   const t = chargeTone(c);
 
@@ -59,6 +61,11 @@ export function ChargeRow({ c, name, onChange }: { c: Charge; name?: string; onC
             <Button size="sm" variant="secondary" onClick={receipt}>
               <Icon name="image" size={15} /> Ver comprovante
             </Button>
+          )}
+          {c.status === "aberta" && pix && (
+            <a href={waLink(phone ?? null, pixMessage(student ?? name ?? "", Number(c.amount), c.due_on, pixCode(pix.key, pix.name, pix.city, Number(c.amount))))} target="_blank" rel="noreferrer" className="press inline-flex h-9 items-center gap-1.5 rounded-[10px] bg-good-soft px-3 text-[15px] font-semibold text-good">
+              <Icon name="chat" size={15} /> Mandar Pix no WhatsApp
+            </a>
           )}
           {c.status === "aberta" ? (
             <>

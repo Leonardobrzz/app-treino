@@ -12,15 +12,17 @@ export default function TrainerInvite() {
 
   useEffect(() => {
     const c = String(code ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+    const v = (new URLSearchParams(location.search).get("vinculo") ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
     try {
       if (c) localStorage.setItem("convite_personal", c);
+      if (v) localStorage.setItem("convite_vinculo", v);
     } catch {
       /* sem storage */
     }
     supabase()
       .auth.getUser()
       .then(({ data }) => {
-        if (data.user) router.replace(`/meu-personal?entrar=${c}`);
+        if (data.user) router.replace(`/meu-personal?entrar=${c}${v ? `&vinculo=${v}` : ""}`);
         else setChecking(false);
       });
   }, [code, router]);

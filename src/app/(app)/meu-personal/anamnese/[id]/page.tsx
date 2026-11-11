@@ -17,8 +17,10 @@ export default function AnswerAnamnese() {
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [byTrainer, setByTrainer] = useState<string | null>(null);
 
   useEffect(() => {
+    setByTrainer(new URLSearchParams(location.search).get("personal"));
     supabase().from("anamneses").select("*").eq("id", id).maybeSingle().then(({ data }) => {
       setA(data as Anamnese | null);
       if (data?.answers) setAns(data.answers as Record<string, string>);
@@ -41,21 +43,21 @@ export default function AnswerAnamnese() {
   async function submit() {
     setBusy(true);
     setError("");
-    const { error: e } = await supabase().rpc("answer_anamnese", { p_id: id, p_answers: ans });
+    const { error: e } = await supabase().rpc(byTrainer ? "trainer_answer_anamnese" : "answer_anamnese", { p_id: id, p_answers: ans });
     if (e) {
       setBusy(false);
       return setError("Não consegui enviar. Tenta de novo.");
     }
-    pushNow();
+    if (!byTrainer) pushNow();
     vibrate([10, 40, 10, 40]);
-    router.replace("/meu-personal");
+    router.replace(byTrainer ? `/personal/aluno/${byTrainer}?aba=anamnese` : "/meu-personal");
   }
 
   const set = (k: string, v: string) => setAns((x) => ({ ...x, [k]: v }));
 
   return (
     <>
-      <Header title="Anamnese" back={{ href: "/meu-personal", label: "Meu personal" }} />
+      <Header title="Anamnese" eyebrow={byTrainer ? "PREENCHENDO COM O ALUNO" : undefined} back={byTrainer ? { href: `/personal/aluno/${byTrainer}?aba=anamnese`, label: "Aluno" } : { href: "/meu-personal", label: "Meu personal" }} />
       <div className="mx-5 mt-1 flex gap-1.5" aria-label={`Parte ${step + 1} de ${sections.length}`}>
         {sections.map((_, i) => (
           <div key={i} className="h-1.5 flex-1 overflow-hidden rounded-full bg-fill">
@@ -92,7 +94,7 @@ export default function AnswerAnamnese() {
           </Button>
         )}
         <Button size="lg" className="flex-1" disabled={missing.length > 0 || busy} onClick={() => (last ? submit() : (setStep(step + 1), window.scrollTo({ top: 0, behavior: "smooth" })))}>
-          {last ? (busy ? "Enviando…" : "Enviar pro personal") : missing.length ? `Faltam ${missing.length}` : "Continuar"}
+          {last ? (busy ? "Enviando…" : byTrainer ? "Salvar anamnese" : "Enviar pro personal") : missing.length ? `Faltam ${missing.length}` : "Continuar"}
         </Button>
       </div>
     </>

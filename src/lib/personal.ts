@@ -94,7 +94,7 @@ export async function myTrainers(): Promise<MyTrainer[]> {
 }
 
 /** Envia foto pra um bucket na pasta do dono (aluno ou personal) e devolve o caminho */
-export async function uploadTo(bucket: "avaliacoes" | "comprovantes" | "vitrine", folder: string, file: Blob, max = 1400) {
+export async function uploadTo(bucket: "avaliacoes" | "comprovantes" | "vitrine" | "progresso", folder: string, file: Blob, max = 1400) {
   const isImg = file.type.startsWith("image/");
   const blob = isImg ? (await shrinkImage(file, max, 0.85)).blob : file;
   const ext = isImg ? "jpg" : "pdf";
@@ -317,4 +317,26 @@ export function ageFrom(birth: string | null | undefined) {
   let a = n.getFullYear() - b.getFullYear();
   if (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) a--;
   return a;
+}
+
+// ---------- aluno sem app ----------
+export type Guest = { id: string; claim_code: string; claimed_by: string | null };
+
+/** Alunos sem app (ainda não vinculados a uma conta) deste personal */
+export async function guestMap(): Promise<Map<string, Guest>> {
+  const { data } = await supabase().from("guest_students").select("id,claim_code,claimed_by").is("claimed_by", null);
+  return new Map(((data ?? []) as Guest[]).map((g) => [g.id, g]));
+}
+
+export function claimLink(trainerCode: string, claim: string) {
+  const origin = typeof window !== "undefined" ? location.origin : "https://carga.app.br";
+  return `${origin}/convite-personal/${trainerCode}?vinculo=${claim}`;
+}
+
+export const inviteText = (name: string, link: string) =>
+  `Oi ${first(name)}! Cadastrei sua avaliação e seu treino no Carga. Cria sua conta grátis por esse link que tudo aparece pra você, e você já recebe os treinos no celular: ${link}`;
+
+/** Texto do Pix pra mandar no WhatsApp (copia e cola com valor) */
+export function pixMessage(name: string, amount: number, due: string, code: string) {
+  return `Oi ${first(name)}! Segue o Pix da mensalidade de ${brl(amount)} (vence ${dateBR(due)}).\n\nPix copia e cola:\n${code}`;
 }

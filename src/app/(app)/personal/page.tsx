@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CountUp, Stagger, StaggerItem } from "@/components/motion";
 import { Card, Icon, SectionTitle, Spinner } from "@/components/ui";
 import { PHeader, Pill, PersonalNav, QuickMessage, StudentLine, useTrainer } from "@/components/personal/common";
-import { brl, daysSince, trainerDashboard, type Appointment, type Charge, type DashRow } from "@/lib/personal";
+import { brl, daysSince, guestMap, trainerDashboard, type Appointment, type Charge, type DashRow, type Guest } from "@/lib/personal";
 import { supabase } from "@/lib/supabase/client";
 import { todayISO } from "@/lib/util";
 
@@ -18,6 +18,7 @@ export default function TrainerHome() {
   const [charges, setCharges] = useState<Charge[]>([]);
   const [today, setToday] = useState<(Appointment & { name: string })[]>([]);
   const [error, setError] = useState("");
+  const [guests, setGuests] = useState<Map<string, Guest>>(new Map());
 
   useEffect(() => {
     if (!me) return;
@@ -26,6 +27,7 @@ export default function TrainerHome() {
     const m1 = todayISO(new Date(now.getFullYear(), now.getMonth() + 1, 0));
     const d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
     const d1 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+    guestMap().then(setGuests);
     Promise.all([
       trainerDashboard(),
       supabase().from("charges").select("*").eq("trainer_id", me.id).gte("due_on", m0).lte("due_on", m1).neq("status", "cancelada"),
@@ -53,7 +55,8 @@ export default function TrainerHome() {
       const reasons: Alert["reasons"] = [];
       let suggest: Alert["suggest"] = "sumido";
       const gone = daysSince(r.last_workout ?? r.since);
-      if (gone != null && gone >= 5) reasons.push({ text: r.last_workout ? `sem treinar há ${gone} dias` : "ainda não treinou", tone: gone >= 10 ? "bad" : "accent" });
+      if (guests.has(r.student_id)) reasons.push({ text: "sem app", tone: "muted" });
+      else if (gone != null && gone >= 5) reasons.push({ text: r.last_workout ? `sem treinar há ${gone} dias` : "ainda não treinou", tone: gone >= 10 ? "bad" : "accent" });
       if (r.overdue_charges > 0) {
         reasons.push({ text: "mensalidade atrasada", tone: "bad" });
         if (!reasons.some((x) => x.text.includes("treinar"))) suggest = "cobranca";
@@ -78,7 +81,7 @@ export default function TrainerHome() {
     attention.sort((a, b) => w(b) - w(a));
     good.sort((a, b) => b.row.prs_14d - a.row.prs_14d || b.row.workouts_7d - a.row.workouts_7d);
     return { attention, good };
-  }, [rows]);
+  }, [rows, guests]);
 
   const link = typeof window !== "undefined" && me?.trainer_code ? `${location.origin}/convite-personal/${me.trainer_code}` : "";
 

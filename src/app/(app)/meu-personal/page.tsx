@@ -25,7 +25,7 @@ export default function MyTrainer() {
   const router = useRouter();
   const [list, setList] = useState<MyTrainer[] | null>(null);
   const [data, setData] = useState<Bundle | null>(null);
-  const [invite, setInvite] = useState<{ code: string; name: string; cref: string | null; city: string | null } | null>(null);
+  const [invite, setInvite] = useState<{ code: string; name: string; cref: string | null; city: string | null; claim?: string } | null>(null);
   const [ranking, setRanking] = useState(true);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -51,16 +51,27 @@ export default function MyTrainer() {
   useEffect(() => {
     load();
     let c = new URLSearchParams(location.search).get("entrar");
+    let v = new URLSearchParams(location.search).get("vinculo");
     try {
       c ||= localStorage.getItem("convite_personal");
+      v ||= localStorage.getItem("convite_vinculo");
     } catch {
       /* sem storage */
     }
-    if (c) lookup(c);
+    if (c) lookup(c, v);
   }, [load]);
 
-  async function lookup(c: string) {
+  async function lookup(c: string, v?: string | null) {
     setError("");
+    if (v) {
+      const { data: gd } = await supabase().rpc("guest_by_code", { p_claim: v });
+      const g = (gd ?? [])[0] as { trainer_code: string; trainer_name: string; student_name: string } | undefined;
+      if (g) {
+        const { data: t0 } = await supabase().rpc("trainer_by_code", { p_code: g.trainer_code });
+        const r0 = (t0 ?? [])[0] as { cref: string | null; city: string | null } | undefined;
+        return setInvite({ code: g.trainer_code, name: g.trainer_name, cref: r0?.cref ?? null, city: r0?.city ?? null, claim: v.toUpperCase() });
+      }
+    }
     const { data: t } = await supabase().rpc("trainer_by_code", { p_code: c });
     const row = (t ?? [])[0] as { trainer_id: string; name: string; cref: string | null; city: string | null } | undefined;
     if (!row) {
@@ -76,13 +87,14 @@ export default function MyTrainer() {
   async function accept() {
     if (!invite) return;
     setBusy(true);
-    const { error: e } = await supabase().rpc("join_trainer", { p_code: invite.code, p_ranking: ranking });
+    const { error: e } = invite.claim ? await supabase().rpc("claim_guest", { p_claim: invite.claim, p_ranking: ranking }) : await supabase().rpc("join_trainer", { p_code: invite.code, p_ranking: ranking });
     setBusy(false);
     try {
       localStorage.removeItem("convite_personal");
+      localStorage.removeItem("convite_vinculo");
     } catch {}
     history.replaceState(null, "", "/meu-personal");
-    if (e) return setError("Não consegui entrar agora. Tenta de novo.");
+    if (e) return setError(e.message.includes("inválido") ? "Esse convite já foi usado ou não existe mais." : "Não consegui entrar agora. Tenta de novo.");
     pushNow();
     vibrate([10, 40, 10, 40]);
     setInvite(null);
@@ -93,6 +105,7 @@ export default function MyTrainer() {
   function decline() {
     try {
       localStorage.removeItem("convite_personal");
+      localStorage.removeItem("convite_vinculo");
     } catch {}
     history.replaceState(null, "", "/meu-personal");
     setInvite(null);
@@ -128,6 +141,9 @@ export default function MyTrainer() {
                 <span className="text-[14px] text-label-2">Personal trainer{invite.cref ? ` · CREF ${invite.cref}` : ""}{invite.city ? ` · ${invite.city}` : ""}</span>
               </div>
             </div>
+            {invite.claim && (
+              <p className="rounded-xl bg-good-soft p-3 text-[14px] font-medium leading-snug text-good">Seu personal já cadastrou seus dados (avaliação, fotos, treino). Entrando, tudo vem pra sua conta.</p>
+            )}
             <p className="text-[14px] leading-snug text-label-2">Entrando, esse personal passa a ver seus treinos, cargas, peso, medidas e fotos de progresso, e pode mandar treinos, avaliações e cobranças pra você. Você pode sair quando quiser.</p>
             <label className="flex items-center justify-between gap-3 rounded-xl bg-card px-4 py-3">
               <span className="text-[15px]">Aparecer no ranking dos alunos dele</span>

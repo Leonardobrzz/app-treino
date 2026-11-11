@@ -15,7 +15,9 @@ import { PhotosTab } from "@/components/personal/PhotosTab";
 import { FinanceTab } from "@/components/personal/FinanceTab";
 import { DietTab } from "@/components/personal/DietTab";
 import { MealsTab } from "@/components/personal/MealsTab";
-import { ageFrom, studentDetail, type StudentDetail } from "@/lib/personal";
+import { ageFrom, claimLink, inviteText, studentDetail, waLink, type StudentDetail } from "@/lib/personal";
+import { Field2, inputCls } from "@/components/personal/common";
+import { Segmented } from "@/components/ui";
 import { supabase } from "@/lib/supabase/client";
 
 const TABS = [
@@ -38,6 +40,9 @@ export default function StudentPage() {
   const [tab, setTab] = useState<Tab>("resumo");
   const [error, setError] = useState("");
   const [ending, setEnding] = useState(false);
+  const [claim, setClaim] = useState<string | null>(null);
+  const [editing, setEditing] = useState<null | { name: string; sex: "masculino" | "feminino"; birth: string; height: string }>(null);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -52,8 +57,17 @@ export default function StudentPage() {
     if (a && TABS.some((t) => t[0] === a)) setTab(a);
   }, []);
   useEffect(() => {
-    if (me) load();
-  }, [me, load]);
+    if (!me) return;
+    load();
+    supabase().from("guest_students").select("claim_code").eq("id", id).is("claimed_by", null).maybeSingle().then(({ data }) => setClaim(data?.claim_code ?? null));
+  }, [me, load, id]);
+
+  async function saveGuest() {
+    if (!editing) return;
+    await supabase().rpc("trainer_update_guest", { p_student: id, p_name: editing.name, p_sex: editing.sex, p_birth: editing.birth || null, p_height: editing.height ? Number(editing.height) : null });
+    setEditing(null);
+    load();
+  }
 
   function pick(t: Tab) {
     setTab(t);
@@ -97,6 +111,24 @@ export default function StudentPage() {
         )}
       </header>
       <PersonalNav />
+      {claim && d && me?.trainer_code && (
+        <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mx-5 mb-2 flex flex-col gap-2.5 rounded-2xl bg-accent-soft p-3.5">
+          <span className="text-[14px] font-medium leading-snug">
+            <b>Aluno sem app.</b> Você já pode avaliar, tirar fotos, montar treino e cobrar. Quando ele entrar pelo link, tudo vai pra conta dele.
+          </span>
+          <div className="flex flex-wrap gap-2">
+            <a href={waLink(d.link.phone, inviteText(p?.name ?? "", claimLink(me.trainer_code, claim)))} target="_blank" rel="noreferrer" className="press flex h-9 items-center gap-1.5 rounded-full bg-accent px-3.5 text-[14px] font-semibold text-on-accent">
+              <Icon name="chat" size={15} /> Convidar no WhatsApp
+            </a>
+            <button onClick={async () => (await navigator.clipboard?.writeText(claimLink(me.trainer_code!, claim)).catch(() => {}), setCopied(true), setTimeout(() => setCopied(false), 1500))} className="press h-9 rounded-full bg-card px-3.5 text-[14px] font-semibold text-accent-ink">
+              {copied ? "Copiado" : "Copiar link"}
+            </button>
+            <button onClick={() => setEditing({ name: p?.name ?? "", sex: p?.sex === "masculino" ? "masculino" : "feminino", birth: p?.birth_date ?? "", height: p?.height_cm ? String(p.height_cm) : "" })} className="press h-9 rounded-full bg-card px-3.5 text-[14px] font-semibold text-accent-ink">
+              Editar dados
+            </button>
+          </div>
+        </motion.div>
+      )}
       <div role="tablist" className="no-scrollbar flex gap-1 overflow-x-auto border-b border-sep px-5">
         {TABS.map(([k, l]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => pick(k)} className={`relative h-11 shrink-0 px-2.5 text-[15px] ${tab === k ? "font-semibold text-label" : "font-medium text-label-2"}`}>
@@ -116,9 +148,9 @@ export default function StudentPage() {
             {tab === "dieta" && <DietTab d={d} trainer={brand} />}
             {tab === "diario" && <MealsTab d={d} />}
             {tab === "avaliacao" && <AssessmentsTab d={d} />}
-            {tab === "anamnese" && <AnamneseTab d={d} />}
-            {tab === "fotos" && <PhotosTab d={d} />}
-            {tab === "financeiro" && <FinanceTab d={d} onSaved={load} />}
+            {tab === "anamnese" && <AnamneseTab d={d} guest={!!claim} />}
+            {tab === "fotos" && <PhotosTab d={d} onSaved={load} />}
+            {tab === "financeiro" && <FinanceTab d={d} onSaved={load} pix={me?.pix_key ? { key: me.pix_key, name: me.pix_name ?? me.name ?? "Personal", city: me.trainer_city ?? null } : null} />}
           </motion.div>
         </AnimatePresence>
       )}
@@ -130,6 +162,26 @@ export default function StudentPage() {
           </Button>
         </div>
       )}
+      <Sheet open={!!editing} onClose={() => setEditing(null)} title="Dados do aluno">
+        {editing && (
+          <div className="flex flex-col gap-3 pt-1">
+            <Field2 label="Nome">
+              <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value.slice(0, 60) })} className={inputCls} />
+            </Field2>
+            <Segmented<"masculino" | "feminino"> value={editing.sex} onChange={(v) => setEditing({ ...editing, sex: v })} options={[{ value: "feminino", label: "Feminino" }, { value: "masculino", label: "Masculino" }]} />
+            <div className="grid grid-cols-2 gap-3">
+              <Field2 label="Nascimento">
+                <input type="date" value={editing.birth} onChange={(e) => setEditing({ ...editing, birth: e.target.value })} className={inputCls} />
+              </Field2>
+              <Field2 label="Altura (cm)">
+                <input inputMode="numeric" value={editing.height} onChange={(e) => setEditing({ ...editing, height: e.target.value.replace(/\D/g, "").slice(0, 3) })} className={inputCls} />
+              </Field2>
+            </div>
+            <Button size="lg" onClick={saveGuest}>Salvar</Button>
+          </div>
+        )}
+      </Sheet>
+
       <Sheet open={ending} onClose={() => setEnding(false)} title="Encerrar acompanhamento?">
         <div className="flex flex-col gap-3 pt-1">
           <p className="text-[15px] leading-snug text-label-2">O aluno sai da sua lista e você deixa de ver os dados dele. Ele continua com a conta, os treinos e o histórico.</p>

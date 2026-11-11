@@ -17,6 +17,7 @@ export default function Charges() {
   const [m, setM] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [list, setList] = useState<Charge[] | null>(null);
   const [names, setNames] = useState<Map<string, string>>(new Map());
+  const [phones, setPhones] = useState<Map<string, string | null>>(new Map());
   const [f, setF] = useState<F>("todas");
 
   const load = useCallback(async () => {
@@ -35,7 +36,7 @@ export default function Charges() {
     load();
   }, [load]);
   useEffect(() => {
-    if (me) trainerDashboard().then((r) => setNames(new Map(r.map((x) => [x.student_id, x.name])))).catch(() => {});
+    if (me) trainerDashboard().then((r) => (setNames(new Map(r.map((x) => [x.student_id, x.name]))), setPhones(new Map(r.map((x) => [x.student_id, x.phone]))))).catch(() => {});
   }, [me]);
 
   const t = useMemo(() => {
@@ -89,7 +90,7 @@ export default function Charges() {
       ) : (
         <Card className="mx-5 mt-3 overflow-hidden">
           {shown.map((c) => (
-            <ChargeRow key={c.id} c={c} name={names.get(c.student_id) ?? "Aluno"} onChange={(n) => setList((l) => l?.map((x) => (x.id === n.id ? n : x)) ?? null)} />
+            <ChargeRow key={c.id} c={c} name={names.get(c.student_id) ?? "Aluno"} phone={phones.get(c.student_id) ?? null} pix={me?.pix_key ? { key: me.pix_key, name: me.pix_name ?? me.name ?? "Personal", city: me.trainer_city ?? null } : null} onChange={(n) => setList((l) => l?.map((x) => (x.id === n.id ? n : x)) ?? null)} />
           ))}
         </Card>
       )}

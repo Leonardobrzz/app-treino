@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { Button, Card, Icon, SectionTitle, Sheet, Spinner } from "@/components/ui";
-import { ChargeRow } from "./ChargeRow";
+import { ChargeRow, type PixInfo } from "./ChargeRow";
 import { Field2, inputCls } from "./common";
 import { brl, type Charge, type StudentDetail } from "@/lib/personal";
 import { pushNow } from "@/lib/push";
 import { supabase } from "@/lib/supabase/client";
 import { todayISO, vibrate } from "@/lib/util";
 
-export function FinanceTab({ d, onSaved }: { d: StudentDetail; onSaved: () => void }) {
+export function FinanceTab({ d, onSaved, pix }: { d: StudentDetail; onSaved: () => void; pix?: PixInfo }) {
   const [fee, setFee] = useState(d.link.fee != null ? String(d.link.fee).replace(".", ",") : "");
   const [dueDay, setDueDay] = useState(d.link.due_day ? String(d.link.due_day) : "");
   const [ends, setEnds] = useState(d.link.plan_ends_on ?? "");
@@ -85,7 +85,7 @@ export function FinanceTab({ d, onSaved }: { d: StudentDetail; onSaved: () => vo
           {open > 0 && <p className="mx-5 mb-2 text-[14px] text-label-2">Em aberto: <b className="text-label">{brl(open)}</b></p>}
           <Card className="mx-5 overflow-hidden">
             {list.map((c) => (
-              <ChargeRow key={c.id} c={c} onChange={(n) => setList((l) => l?.map((x) => (x.id === n.id ? n : x)) ?? null)} />
+              <ChargeRow key={c.id} c={c} pix={pix} phone={d.link.phone} student={d.profile.name ?? ""} onChange={(n) => setList((l) => l?.map((x) => (x.id === n.id ? n : x)) ?? null)} />
             ))}
           </Card>
         </>

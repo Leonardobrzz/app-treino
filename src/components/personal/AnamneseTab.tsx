@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Button, Card, Icon, Spinner } from "@/components/ui";
@@ -56,7 +57,8 @@ export function AnamneseView({ a }: { a: Anamnese }) {
   );
 }
 
-export function AnamneseTab({ d }: { d: StudentDetail }) {
+export function AnamneseTab({ d, guest = false }: { d: StudentDetail; guest?: boolean }) {
+  const router = useRouter();
   const [list, setList] = useState<Anamnese[] | null>(null);
   const [extra, setExtra] = useState("");
   const [asking, setAsking] = useState(false);
@@ -83,6 +85,16 @@ export function AnamneseTab({ d }: { d: StudentDetail }) {
     load();
   }
 
+  async function fillNow() {
+    setBusy(true);
+    let aid = list?.find((a) => !a.answered_at)?.id;
+    if (!aid) {
+      const { data } = await supabase().rpc("request_anamnese", { p_student: d.profile.id, p_extra: [] });
+      aid = data as string;
+    }
+    router.push(`/meu-personal/anamnese/${aid}?personal=${d.profile.id}`);
+  }
+
   if (!list) return <Spinner />;
   const answered = list.find((a) => a.answered_at);
   const pending = list.find((a) => !a.answered_at);
@@ -95,7 +107,12 @@ export function AnamneseTab({ d }: { d: StudentDetail }) {
           <span className="flex-1 text-[14px] font-medium">Anamnese enviada em {fmtDate(pending.requested_at)}. Esperando o aluno responder.</span>
         </div>
       )}
-      {!asking ? (
+      {guest && (
+        <Button size="lg" disabled={busy} onClick={fillNow}>
+          <Icon name="edit" size={18} /> Preencher agora com o aluno
+        </Button>
+      )}
+      {guest ? null : !asking ? (
         <Button variant={answered || pending ? "secondary" : "primary"} size="lg" className={answered || pending ? "!bg-card" : ""} onClick={() => setAsking(true)}>
           <Icon name="clipboard" size={18} /> {answered || pending ? "Pedir de novo" : "Pedir anamnese"}
         </Button>

@@ -1,16 +1,52 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, Icon, SectionTitle, Spinner } from "@/components/ui";
 import { signed, uploadTo, type StudentDetail } from "@/lib/personal";
+import { shrinkImage } from "@/lib/image";
+import { todayISO } from "@/lib/util";
 import { supabase } from "@/lib/supabase/client";
 import { fmtDate, vibrate } from "@/lib/util";
 
 type Item = { id: string; before_path: string; after_path: string; caption: string | null };
 const pub = (p: string) => supabase().storage.from("vitrine").getPublicUrl(p).data.publicUrl;
 
-export function PhotosTab({ d }: { d: StudentDetail }) {
+const POSES = ["frente", "lado", "costas"] as const;
+type Pose = (typeof POSES)[number];
+
+export function PhotosTab({ d, onSaved }: { d: StudentDetail; onSaved: () => void }) {
+  const [shoot, setShoot] = useState(false);
+  const [day, setDay] = useState(todayISO());
+  const [shots, setShots] = useState<Partial<Record<Pose, { blob: Blob; url: string }>>>({});
+  const [saving, setSaving] = useState(false);
+  const inputs = useRef<Partial<Record<Pose, HTMLInputElement | null>>>({});
+
+  async function pickShot(p: Pose, f?: File) {
+    if (!f) return;
+    const { blob, preview } = await shrinkImage(f, 1400, 0.85);
+    setShots((x) => ({ ...x, [p]: { blob, url: preview } }));
+  }
+  async function saveShots() {
+    setSaving(true);
+    try {
+      for (const p of POSES) {
+        const s = shots[p];
+        if (!s) continue;
+        const path = await uploadTo("progresso", d.profile.id, s.blob);
+        const { error } = await supabase().from("progress_photos").insert({ user_id: d.profile.id, taken_on: day, pose: p, path });
+        if (error) throw error;
+      }
+      vibrate([10, 40, 10]);
+      setShots({});
+      setShoot(false);
+      onSaved();
+    } catch {
+      setMsg("Não consegui salvar as fotos. Tenta de novo.");
+    } finally {
+      setSaving(false);
+    }
+  }
   const [urls, setUrls] = useState<Map<string, string> | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [pick, setPick] = useState<string[]>([]);
@@ -67,6 +103,41 @@ export function PhotosTab({ d }: { d: StudentDetail }) {
 
   return (
     <div className="pt-3">
+      {!shoot ? (
+        <div className="mx-5 mb-3">
+          <Button size="lg" className="w-full" onClick={() => setShoot(true)}>
+            <Icon name="camera" size={18} /> Tirar fotos de progresso
+          </Button>
+        </div>
+      ) : (
+        <Card className="mx-5 mb-3 flex flex-col gap-3 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[15px] font-semibold">Fotos de progresso</span>
+            <input type="date" value={day} max={todayISO()} onChange={(e) => setDay(e.target.value)} className="h-9 rounded-lg bg-card-2 px-2 text-[14px] outline-none" />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {POSES.map((p) => (
+              <div key={p}>
+                <input ref={(el) => { inputs.current[p] = el; }} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => pickShot(p, e.target.files?.[0])} data-testid={`progresso-${p}`} />
+                <button onClick={() => inputs.current[p]?.click()} className="press relative flex w-full flex-col items-center justify-center gap-1 overflow-hidden rounded-xl bg-card-2 text-label-2" style={{ aspectRatio: "3 / 4" }}>
+                  {shots[p] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={shots[p]!.url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  ) : (
+                    <Icon name="camera" size={22} />
+                  )}
+                  <span className={`relative text-[12px] font-semibold capitalize ${shots[p] ? "mt-auto mb-1 rounded bg-black/60 px-1.5 text-white" : ""}`}>{p}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+          <span className="text-[12px] leading-snug text-label-3">Corpo inteiro, mesma distância e luz de sempre. As fotos ficam no app do aluno e só vão pra vitrine se ele autorizar.</span>
+          <div className="flex gap-2">
+            <Button className="flex-1" disabled={saving || !Object.keys(shots).length} onClick={saveShots}>{saving ? "Salvando…" : "Salvar fotos"}</Button>
+            <Button variant="plain" onClick={() => (setShoot(false), setShots({}))}>Cancelar</Button>
+          </div>
+        </Card>
+      )}
       <div className={`mx-5 flex gap-3 rounded-2xl p-3.5 text-[14px] leading-snug ${consent ? "bg-good-soft text-good" : "bg-card text-label-2"}`}>
         <Icon name={consent ? "check" : "lock"} size={18} className="shrink-0" />
         {consent ? "O aluno autorizou aparecer na sua vitrine. Toque em duas fotos (antes e depois) pra publicar." : "O aluno não autorizou aparecer na sua vitrine. Ele pode liberar em “Meu personal” no app dele."}
