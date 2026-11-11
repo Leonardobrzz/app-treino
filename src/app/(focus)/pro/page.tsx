@@ -22,6 +22,7 @@ const ROWS: { icon: IconName; label: string; free: string | boolean; pro: string
   { icon: "image", label: "Fotos de progresso: antes e depois", free: false, pro: true },
   { icon: "trophy", label: "Gráfico de força (1RM) por exercício", free: false, pro: true },
   { icon: "ruler", label: "Linha do tempo do corpo", free: false, pro: true },
+  { icon: "download", label: "Relatório em PDF do período", free: false, pro: true },
   { icon: "clock", label: "Evolução do ano inteiro", free: false, pro: true },
 ];
 

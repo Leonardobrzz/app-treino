@@ -89,6 +89,7 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 - [x] **Card pra story**: no fim do treino gera uma imagem 1080×1920 com volume, séries, tempo, recordes e exercícios, e abre o compartilhar do celular
 - [x] **Resumo da semana**: treinos x meta, volume vs semana anterior, recordes, séries por músculo, alimentação e peso, + sugestões da IA pra próxima semana (Pro)
 - [x] **Amigos**: link de convite e ranking semanal (treinos, volume, séries). Os amigos só veem esses totais
+- [x] **Relatório em PDF** (Pro): escolhe o período (30 dias, 3/6 meses, 1 ano ou datas livres) e gera um PDF de 3 páginas com resumo, destaques, peso, mapa do corpo colorido (laranja cresceu, verde diminuiu) com a tabela de medidas, antes e depois das fotos, força por exercício, recordes, séries por músculo e alimentação. Abre o compartilhar do celular pra mandar pro personal ou nutri
 - [x] **Fotos de progresso**: frente, lado e costas, com antes/depois deslizante e a diferença de peso e medidas entre as datas (Pro, armazenamento privado)
 
 **Carga Pro (assinatura)**
@@ -290,6 +291,7 @@ src/
 │   │   ├── fotos/         fotos de progresso (antes e depois)
 │   │   ├── ia/            chat com o assistente
 │   │   ├── admin/         painel do dono (números do app)
+│   │   ├── relatorio/     relatório em PDF do período
 │   │   └── perfil/        meta, objetivo, tema e sair
 │   ├── (focus)/treino/    treino ao vivo (tela cheia)
 │   ├── (focus)/pro/       planos e assinatura

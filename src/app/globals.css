@@ -147,3 +147,27 @@ input[type="number"] {
     display: none;
   }
 }
+
+/* relatório em PDF: sempre no tema claro, mesmo com o app no escuro */
+.report-light {
+  color-scheme: light;
+  --bg: #f2f2f7;
+  --card: #ffffff;
+  --card-2: #f2f2f7;
+  --label: #000000;
+  --label-2: #6e6e73;
+  --label-3: #8e8e93;
+  --sep: #e5e5ea;
+  --fill: #e5e5ea;
+  --accent: #ff9500;
+  --accent-ink: #c93400;
+  --accent-soft: #fff1de;
+  --on-accent: #000000;
+  --good: #1e7a34;
+  --good-soft: #e3f5e8;
+  --good-fill: #34c759;
+  --bad: #b42318;
+  --bad-fill: #ff3b30;
+  --muscle: #d6d6db;
+  --skin: #e8e8ed;
+}

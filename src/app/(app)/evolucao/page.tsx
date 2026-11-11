@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { LineChart } from "@/components/LineChart";
-import { ProLock } from "@/components/ProLock";
+import { ProBadge, ProLock } from "@/components/ProLock";
 import { getSubscription } from "@/lib/data";
 import { isPro } from "@/lib/pro";
 import { Card, Empty, Header, Icon, LinkButton, SectionTitle, Segmented, Spinner, Stat } from "@/components/ui";
@@ -136,6 +136,16 @@ export default function EvolutionPage() {
             <div className="flex flex-1 flex-col">
               <span className="text-[16px] font-semibold">Resumo da semana</span>
               <span className="text-[13px] text-label-2">Treinos, recordes e o que ajustar</span>
+            </div>
+            <Icon name="chevron" size={18} className="text-label-3" />
+          </Link>
+          <Link href="/relatorio" className="press mx-5 mt-2.5 flex items-center gap-3 rounded-2xl bg-card p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
+              <Icon name="download" size={22} />
+            </div>
+            <div className="flex flex-1 flex-col">
+              <span className="flex items-center gap-1.5 text-[16px] font-semibold">Relatório em PDF {!pro && <ProBadge />}</span>
+              <span className="text-[13px] text-label-2">Medidas, corpo, força e peso do período</span>
             </div>
             <Icon name="chevron" size={18} className="text-label-3" />
           </Link>
