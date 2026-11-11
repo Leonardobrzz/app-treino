@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { Exercise } from "@/lib/types";
 import { Button, Icon } from "./ui";
 import { ExerciseGuideSheet } from "./ExerciseGuide";
+import { aliasTerms } from "@/lib/aliases";
 
 export const GROUPS = ["Peito", "Costas", "Ombros", "Bíceps", "Tríceps", "Antebraço", "Trapézio", "Abdômen", "Quadríceps", "Posterior de coxa", "Glúteos", "Adutores", "Panturrilha", "Cardio"];
 
@@ -44,7 +45,9 @@ export function ExerciseList({
   const list = useMemo(() => {
     const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
     const nq = norm(q.trim());
-    return all.filter((e) => (!catalogOnly || !e.created_by) && (!group || e.muscle_group === group || e.secondary.includes(group)) && (!nq || norm(e.name).includes(nq) || norm(e.muscle_group).includes(nq)));
+    const extra = aliasTerms(q);
+    const hit = (e: Exercise) => !nq || norm(e.name).includes(nq) || norm(e.muscle_group).includes(nq) || extra.some((t) => norm(e.name).includes(t));
+    return all.filter((e) => (!catalogOnly || !e.created_by) && (!group || e.muscle_group === group || e.secondary.includes(group)) && hit(e));
   }, [all, q, group, catalogOnly]);
 
   async function create() {

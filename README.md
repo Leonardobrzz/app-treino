@@ -91,6 +91,7 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 - [x] **Amigos**: link de convite e ranking semanal (treinos, volume, séries). Os amigos só veem esses totais
 - [x] **Feed dos amigos**: posta o treino com foto (volume, duração, exercícios e recorde por cima da imagem) ou só foto e texto. Curtir com dois toques, comentários, denunciar e bloquear. É fechado: só você e seus amigos veem. Post com 3 denúncias some sozinho, e as denúncias aparecem no painel do dono
 - [x] **Área do personal** (grátis por enquanto): o personal ativa no Perfil e convida alunos por link ou código. Painel com radar (quem sumiu, volume caindo, mensalidade atrasada, plano vencendo, sem anamnese ou reavaliação, quem bateu recorde) e mensagens prontas no WhatsApp. Por aluno: resumo (frequência, cargas de cada treino, peso, medidas), montar e enviar treino com métodos (bi-set, drop, pirâmide, rest-pause…) ou automático pelo perfil do aluno, avaliação física (Pollock 3 e 7 + Siri, perimetria, postural por fotos com grade e linha de prumo, comparação com a anterior), anamnese com PAR-Q, fotos de progresso, relatório em PDF com o nome e CREF do personal e financeiro. Agenda de aulas, cobranças do mês, desafios com ranking entre os alunos e vitrine pública com antes e depois (só com autorização do aluno)
+- [x] **Mais ferramentas do personal**: montar a semana com IA lendo anamnese (lesões, PAR-Q) e avaliação (postura, % de gordura), importar a ficha de papel por foto, versões anteriores do treino, PDF da ficha de treino e das orientações alimentares com nome e CREF, metas de alimentação aplicadas no app do aluno, diário alimentar do aluno (o que ele comeu, com calorias e proteína contra a meta), busca de exercício por apelido ("puxada alta", "voador", "stiff"…), relatórios do mês por aluno com aviso todo dia 1 e tela mais larga no computador
 - [x] **Lado do aluno do personal**: "Meu personal" com anamnese pra responder, Pix copia e cola e QR Code com o valor (o dinheiro cai direto na chave do personal, sem passar pelo Carga), envio de comprovante, próximas aulas, desafios, avaliação física e controle de privacidade (ranking e vitrine). O treino enviado aparece em Treinos com o método de cada exercício
 - [x] **Avisos e push**: sininho no Hoje e notificação no celular (web push) pra treino novo, anamnese, avaliação, cobrança, pagamento confirmado, aula marcada e desafio. Um cron diário (Vercel) gera as mensalidades, lembra cobrança vencendo ou atrasada, plano acabando, aluno sumido e aula do dia seguinte
 - [x] **Animações**: confete e números subindo no fim do treino, cards entrando em sequência no Hoje, coração ao curtir, abas com efeito de toque
@@ -297,7 +298,7 @@ src/
 │   │   ├── resumo/        resumo da semana
 │   │   ├── amigos/        convite e ranking semanal
 │   │   ├── feed/          feed dos amigos e novo post
-│   │   ├── personal/      área do personal (painel, alunos, aluno/[id], agenda, cobranças, desafios, perfil)
+│   │   ├── personal/      área do personal (painel, alunos, aluno/[id], agenda, cobranças, desafios, relatórios, perfil)
 │   │   ├── meu-personal/  lado do aluno (Pix, comprovante, anamnese)
 │   │   ├── avisos/        avisos e ativar notificações
 │   │   ├── fotos/         fotos de progresso (antes e depois)

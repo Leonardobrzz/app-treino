@@ -15,7 +15,7 @@ const GREEN = "#1E7A34";
 
 const signed = (v: number, d = 1) => `${v > 0 ? "+" : v < 0 ? "−" : "±"}${num(Math.abs(v), d)}`;
 
-function Page({ n, total, children }: { n: number; total: number; children: ReactNode }) {
+export function Page({ n, total, children }: { n: number; total: number; children: ReactNode }) {
   return (
     <section data-report-page className="report-light relative flex flex-col overflow-hidden bg-white text-black" style={{ width: PAGE_W, height: PAGE_H, padding: "48px 56px 70px", fontFamily: "var(--font-inter), system-ui, sans-serif" }}>
       {children}
@@ -31,7 +31,7 @@ function Page({ n, total, children }: { n: number; total: number; children: Reac
   );
 }
 
-function Logo({ size = 40 }: { size?: number }) {
+export function Logo({ size = 40 }: { size?: number }) {
   return (
     <span className="inline-flex items-center justify-center" style={{ width: size, height: size, borderRadius: size * 0.28, background: ORANGE }}>
       <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 24 24" fill="none" stroke="#111113" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
@@ -41,7 +41,7 @@ function Logo({ size = 40 }: { size?: number }) {
   );
 }
 
-function H2({ children, sub }: { children: ReactNode; sub?: string }) {
+export function H2({ children, sub }: { children: ReactNode; sub?: string }) {
   return (
     <div className="mb-3 mt-6 flex items-baseline justify-between">
       <h2 className="text-[20px] font-bold tracking-[-0.3px]">{children}</h2>

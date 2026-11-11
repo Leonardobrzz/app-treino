@@ -12,6 +12,7 @@ type N = { id: string; kind: string; title: string; body: string | null; url: st
 const ICON: Record<string, IconName> = {
   treino_novo: "dumbbell", anamnese: "clipboard", anamnese_ok: "clipboard", avaliacao: "body", cobranca: "pix", pagamento_ok: "check", comprovante: "image",
   aula: "calendar", desafio: "trophy", plano: "clock", sumido: "users", novo_aluno: "users", aluno_saiu: "users",
+  dieta: "apple", metas: "apple", relatorios: "download",
 };
 
 export default function Notifications() {

@@ -33,9 +33,18 @@ export default function Relatorio() {
 
   const [student, setStudent] = useState<string | null>(null);
   const [trainer, setTrainer] = useState<{ name: string; cref: string | null } | null>(null);
+  const fromUrl = useRef(false);
 
   useEffect(() => {
-    const aluno = new URLSearchParams(location.search).get("aluno");
+    const q = new URLSearchParams(location.search);
+    const aluno = q.get("aluno");
+    const de = q.get("de"), ate = q.get("ate");
+    if (de && ate && /^\d{4}-\d{2}-\d{2}$/.test(de) && /^\d{4}-\d{2}-\d{2}$/.test(ate)) {
+      fromUrl.current = true;
+      setPreset("custom");
+      setFrom(de);
+      setTo(ate);
+    }
     if (aluno) {
       // personal gerando o relatório de um aluno: liberado e com a marca dele
       setStudent(aluno);
@@ -46,6 +55,10 @@ export default function Relatorio() {
   }, []);
 
   useEffect(() => {
+    if (fromUrl.current) {
+      fromUrl.current = false;
+      return;
+    }
     if (preset !== "custom") {
       setFrom(minus(Number(preset)));
       setTo(todayISO());

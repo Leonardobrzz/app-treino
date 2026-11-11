@@ -1,10 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion, Reorder } from "motion/react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ExerciseList, loadExercises } from "@/components/ExercisePicker";
 import { Confetti } from "@/components/motion";
 import { Button, Card, Icon, SectionTitle, Sheet } from "@/components/ui";
+import { PdfButton } from "./PdfButton";
+import { WorkoutSheetPages } from "./SheetPages";
+import { shrinkImage } from "@/lib/image";
+import { slug } from "@/lib/pdf";
+import { supabase } from "@/lib/supabase/client";
+import { fmtDate } from "@/lib/util";
 import { METHODS, methodLabel, sendPlan, type PlanDayT, type PlanEx, type StudentDetail, type StudentPlan } from "@/lib/personal";
 import { generatePlan, type Goal, type Level, type Location } from "@/lib/plan-generator";
 import type { Exercise } from "@/lib/types";
@@ -18,7 +24,16 @@ type Day = Omit<PlanDayT, "exercises"> & { exercises: Row[] };
 
 const toRows = (p: StudentPlan | null): Day[] => (p?.days ?? []).map((d) => ({ ...d, exercises: d.exercises.map((e) => ({ ...e, k: ++uid })) }));
 
-export function PlanEditor({ d, onSent }: { d: StudentDetail; onSent: () => void }) {
+type Version = StudentPlan & { id: string; active: boolean; created_at: string };
+
+export function PlanEditor({ d, onSent, trainer }: { d: StudentDetail; onSent: () => void; trainer: { name: string; cref: string | null } }) {
+  const [tools, setTools] = useState(false);
+  const [aiBusy, setAiBusy] = useState<"" | "montar" | "ficha">("");
+  const [pedido, setPedido] = useState("");
+  const [why, setWhy] = useState("");
+  const [versions, setVersions] = useState<Version[] | null>(null);
+  const [showVersions, setShowVersions] = useState(false);
+  const fichaInput = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(d.plan?.trainer_id ? d.plan.name : "Treino do personal");
   const [days, setDays] = useState<Day[]>(() => toRows(d.plan));
   const [sel, setSel] = useState<number | null>(days[0]?.weekday ?? null);
@@ -90,6 +105,45 @@ export function PlanEditor({ d, onSent }: { d: StudentDetail; onSent: () => void
     setMsg("Semana montada com o perfil do aluno. Ajuste o que quiser e envie.");
   }
 
+  function applyPlan(name: string, ds: PlanDayT[]) {
+    const next: Day[] = ds.map((x) => ({ ...x, exercises: x.exercises.map((e) => ({ ...e, k: ++uid })) }));
+    setDays(next);
+    setSel(next[0]?.weekday ?? null);
+    setName(name);
+    setDirty(true);
+    vibrate(10);
+  }
+
+  async function ai(mode: "montar" | "ficha", files?: FileList | null) {
+    setAiBusy(mode);
+    setMsg("");
+    setWhy("");
+    try {
+      const images = mode === "ficha" && files ? await Promise.all([...files].slice(0, 4).map(async (f) => (await shrinkImage(f, 1600, 0.85)).data)) : undefined;
+      const r = await fetch("/api/personal/ia", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ student: d.profile.id, mode, images, pedido }) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "erro");
+      applyPlan(j.name, j.days);
+      setWhy(j.why || "");
+      setTools(false);
+      setMsg(`${mode === "ficha" ? "Ficha transcrita" : "Semana montada pela IA"}. Revise e envie.${j.missing?.length ? ` Não achei no catálogo: ${j.missing.slice(0, 4).join(", ")}.` : ""}`);
+    } catch (e) {
+      setMsg((e as Error).message === "erro" ? "A IA não respondeu agora. Tente de novo." : (e as Error).message);
+      setTools(false);
+    } finally {
+      setAiBusy("");
+      if (fichaInput.current) fichaInput.current.value = "";
+    }
+  }
+
+  async function openVersions() {
+    setShowVersions(true);
+    if (!versions) {
+      const { data } = await supabase().rpc("trainer_plan_history", { p_student: d.profile.id });
+      setVersions((data ?? []) as Version[]);
+    }
+  }
+
   async function send() {
     setBusy(true);
     setMsg("");
@@ -119,9 +173,25 @@ export function PlanEditor({ d, onSent }: { d: StudentDetail; onSent: () => void
 
       <div className="mx-5 mt-3 flex gap-2">
         <input value={name} onChange={(e) => (setName(e.target.value.slice(0, 80)), setDirty(true))} aria-label="Nome do treino" className="h-11 min-w-0 flex-1 rounded-xl bg-card px-3.5 text-[16px] font-semibold outline-none ring-accent focus:ring-2" />
-        <Button variant="secondary" className="!bg-card" onClick={auto}>
-          <Icon name="spark" size={17} /> Automático
+        <Button variant="secondary" className="!bg-card" onClick={() => setTools(true)}>
+          <Icon name="spark" size={17} /> Montar
         </Button>
+      </div>
+
+      <AnimatePresence>
+        {why && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mx-5 mt-3 overflow-hidden">
+            <div className="flex gap-2.5 rounded-2xl bg-accent-soft p-3.5 text-[13.5px] leading-snug">
+              <Icon name="spark" size={18} className="shrink-0 text-accent-ink" />
+              <span>{why}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <div className="mx-5 mt-2 flex gap-2">
+        <button onClick={openVersions} className="press flex h-9 items-center gap-1.5 rounded-full bg-card px-3.5 text-[14px] font-semibold text-accent-ink">
+          <Icon name="clock" size={15} /> Versões anteriores
+        </button>
       </div>
 
       <SectionTitle>Dias</SectionTitle>
@@ -181,10 +251,77 @@ export function PlanEditor({ d, onSent }: { d: StudentDetail; onSent: () => void
 
       {msg && <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mx-5 mt-5 rounded-xl bg-good-soft px-4 py-2.5 text-center text-[14px] font-medium text-good">{msg}</motion.p>}
       <div className="sticky bottom-[84px] z-20 mt-4 bg-bg/95 px-5 pb-3 pt-2 backdrop-blur">
-        <Button size="lg" className="w-full shadow-xl" disabled={busy || total === 0 || (!dirty && fromTrainer)} onClick={send}>
-          <Icon name="send" size={18} /> {busy ? "Enviando…" : `Enviar pro aluno (${days.length} ${days.length === 1 ? "dia" : "dias"})`}
-        </Button>
+        <div className="flex gap-2">
+          <Button size="lg" className="flex-1 shadow-xl" disabled={busy || total === 0 || (!dirty && fromTrainer)} onClick={send}>
+            <Icon name="send" size={18} /> {busy ? "Enviando…" : `Enviar (${days.length} ${days.length === 1 ? "dia" : "dias"})`}
+          </Button>
+          {total > 0 && (
+            <PdfButton
+              label="PDF"
+              className="!h-[52px] shadow-xl"
+              filename={`ficha-${slug(d.profile.name ?? "aluno")}.pdf`}
+              title={`Ficha de treino · ${d.profile.name ?? ""}`}
+              render={() => <WorkoutSheetPages name={name} days={days.map((x) => ({ weekday: x.weekday, title: x.title, exercises: x.exercises }))} who={{ student: d.profile.name ?? "Aluno", trainer: trainer.name, cref: trainer.cref }} />}
+            />
+          )}
+        </div>
       </div>
+
+      <Sheet open={tools} onClose={() => !aiBusy && setTools(false)} title="Montar a semana">
+        <div className="flex flex-col gap-2.5 pt-1">
+          <button onClick={() => (setTools(false), auto())} className="press flex items-start gap-3 rounded-2xl bg-card p-4 text-left">
+            <Icon name="dumbbell" size={22} className="mt-0.5 shrink-0 text-accent-ink" />
+            <span className="flex flex-col">
+              <span className="text-[16px] font-semibold">Automático pelo perfil</span>
+              <span className="text-[13px] leading-snug text-label-2">Na hora, com objetivo, nível, dias e tempo do aluno.</span>
+            </span>
+          </button>
+          <div className="flex flex-col gap-2 rounded-2xl bg-card p-4">
+            <span className="flex items-start gap-3">
+              <Icon name="spark" size={22} className="mt-0.5 shrink-0 text-accent-ink" />
+              <span className="flex flex-col">
+                <span className="text-[16px] font-semibold">Montar com IA</span>
+                <span className="text-[13px] leading-snug text-label-2">Lê a anamnese (lesões, PAR-Q), a última avaliação (postura, % de gordura) e o perfil.</span>
+              </span>
+            </span>
+            <textarea value={pedido} onChange={(e) => setPedido(e.target.value.slice(0, 600))} rows={2} placeholder="Pedido opcional: ex. foco em glúteos, sem agachamento livre" className="w-full resize-none rounded-xl bg-card-2 px-3.5 py-2.5 text-[15px] outline-none ring-accent placeholder:text-label-3 focus:ring-2" />
+            <Button disabled={!!aiBusy} onClick={() => ai("montar")}>{aiBusy === "montar" ? "Montando… (uns 20 s)" : "Montar com IA"}</Button>
+          </div>
+          <input ref={fichaInput} type="file" accept="image/*" multiple className="hidden" onChange={(e) => ai("ficha", e.target.files)} data-testid="ficha-personal" />
+          <button disabled={!!aiBusy} onClick={() => fichaInput.current?.click()} className="press flex items-start gap-3 rounded-2xl bg-card p-4 text-left disabled:opacity-50">
+            <Icon name="camera" size={22} className="mt-0.5 shrink-0 text-accent-ink" />
+            <span className="flex flex-col">
+              <span className="text-[16px] font-semibold">{aiBusy === "ficha" ? "Lendo a ficha…" : "Importar ficha por foto"}</span>
+              <span className="text-[13px] leading-snug text-label-2">Foto da sua ficha de papel ou print: vira treino aqui pra você ajustar.</span>
+            </span>
+          </button>
+        </div>
+      </Sheet>
+
+      <Sheet open={showVersions} onClose={() => setShowVersions(false)} title="Versões anteriores">
+        {!versions ? (
+          <p className="py-6 text-center text-[14px] text-label-3">Carregando…</p>
+        ) : versions.length === 0 ? (
+          <p className="py-6 text-center text-[15px] text-label-2">Você ainda não enviou nenhum treino pra esse aluno.</p>
+        ) : (
+          <div className="flex flex-col gap-2 pt-1">
+            {versions.map((v) => (
+              <div key={v.id} className="flex items-center gap-3 rounded-2xl bg-card p-3.5">
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-[15px] font-semibold">{v.name}</span>
+                  <span className="text-[13px] text-label-2">
+                    {fmtDate(v.created_at, { year: true })} · {v.days.length} {v.days.length === 1 ? "dia" : "dias"}
+                    {v.active ? " · em uso" : ""}
+                  </span>
+                </span>
+                <Button size="sm" variant="secondary" onClick={() => (applyPlan(v.name, v.days), setShowVersions(false), setMsg("Versão carregada. Envie pra voltar a ela."))}>
+                  Usar
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Sheet>
 
       <Sheet open={picking} onClose={() => setPicking(false)} title="Adicionar exercícios">
         <ExerciseList

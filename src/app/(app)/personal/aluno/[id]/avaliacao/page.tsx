@@ -170,7 +170,7 @@ export default function NewAssessment() {
       </AnimatePresence>
 
       <SectionTitle>Perimetria (cm)</SectionTitle>
-      <div className="mx-5 grid grid-cols-3 gap-2.5">
+      <div className="mx-5 grid grid-cols-3 gap-2.5 lg:grid-cols-6">
         {CIRCS.map((k) => (
           <label key={k} className="flex flex-col gap-1 text-[12px] font-semibold text-label-2">
             <span className="truncate">{CIRC_LABEL[k]}</span>

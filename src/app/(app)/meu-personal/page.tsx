@@ -13,10 +13,13 @@ import { Pill } from "@/components/personal/common";
 import { chargeTone } from "@/components/personal/ChargeRow";
 import { brl, dateBR, myId, myTrainers, pixCode, uploadTo, waLink, type Anamnese, type Appointment, type Assessment, type Challenge, type Charge, type MyTrainer } from "@/lib/personal";
 import { pushNow } from "@/lib/push";
+import { PdfButton } from "@/components/personal/PdfButton";
+import { DietSheetPages, type Diet } from "@/components/personal/SheetPages";
+import { getProfile } from "@/lib/data";
 import { supabase } from "@/lib/supabase/client";
 import { todayISO, vibrate } from "@/lib/util";
 
-type Bundle = { charges: Charge[]; anamneses: Anamnese[]; appts: Appointment[]; challenges: Challenge[]; assessments: Assessment[] };
+type Bundle = { charges: Charge[]; anamneses: Anamnese[]; appts: Appointment[]; challenges: Challenge[]; assessments: Assessment[]; diets: (Diet & { trainer_id: string })[] };
 
 export default function MyTrainer() {
   const router = useRouter();
@@ -32,16 +35,17 @@ export default function MyTrainer() {
   const load = useCallback(async () => {
     const [t, uid] = await Promise.all([myTrainers(), myId()]);
     setList(t);
-    if (!t.length) return setData({ charges: [], anamneses: [], appts: [], challenges: [], assessments: [] });
+    if (!t.length) return setData({ charges: [], anamneses: [], appts: [], challenges: [], assessments: [], diets: [] });
     const now = new Date().toISOString();
-    const [c, a, ap, ch, as] = await Promise.all([
+    const [c, a, ap, ch, as, di] = await Promise.all([
       supabase().from("charges").select("*").eq("student_id", uid).neq("status", "cancelada").order("due_on", { ascending: false }).limit(24),
       supabase().from("anamneses").select("*").eq("student_id", uid).order("requested_at", { ascending: false }),
       supabase().from("appointments").select("*").eq("student_id", uid).gte("starts_at", now).neq("status", "cancelada").order("starts_at").limit(10),
       supabase().from("challenges").select("*").gte("ends_on", todayISO()).order("ends_on"),
       supabase().from("assessments").select("*").eq("student_id", uid).order("assessed_on", { ascending: false }).limit(10),
+      supabase().from("diet_plans").select("*").eq("student_id", uid).eq("active", true),
     ]);
-    setData({ charges: (c.data ?? []) as Charge[], anamneses: (a.data ?? []) as Anamnese[], appts: (ap.data ?? []) as Appointment[], challenges: (ch.data ?? []) as Challenge[], assessments: (as.data ?? []) as Assessment[] });
+    setData({ charges: (c.data ?? []) as Charge[], anamneses: (a.data ?? []) as Anamnese[], appts: (ap.data ?? []) as Appointment[], challenges: (ch.data ?? []) as Challenge[], assessments: (as.data ?? []) as Assessment[], diets: (di.data ?? []) as Bundle["diets"] });
   }, []);
 
   useEffect(() => {
@@ -145,6 +149,7 @@ function TrainerBlock({ t, data, reload, onLeft }: { t: MyTrainer; data: Bundle;
   const appts = data.appts.filter((a) => a.trainer_id === t.trainer_id);
   const chall = data.challenges.filter((c) => c.trainer_id === t.trainer_id);
   const assess = data.assessments.filter((a) => a.trainer_id === t.trainer_id);
+  const diet = data.diets.find((x) => x.trainer_id === t.trainer_id);
   const [leaving, setLeaving] = useState(false);
   const [rk, setRk] = useState(t.ranking_opt_in);
   const [sc, setSc] = useState(t.showcase_consent);
@@ -215,6 +220,8 @@ function TrainerBlock({ t, data, reload, onLeft }: { t: MyTrainer; data: Bundle;
           </Card>
         </>
       )}
+
+      {diet && <DietCard diet={diet} t={t} />}
 
       {chall.length > 0 && (
         <>
@@ -359,5 +366,63 @@ function PayCard({ c, t, onDone }: { c: Charge; t: MyTrainer; onDone: () => void
         )}
       </AnimatePresence>
     </Card>
+  );
+}
+
+function DietCard({ diet, t }: { diet: Diet; t: MyTrainer }) {
+  const [open, setOpen] = useState(false);
+  const [me, setMe] = useState("Aluno");
+  useEffect(() => {
+    getProfile().then((p) => setMe(p?.name ?? "Aluno"));
+  }, []);
+  const tg = diet.targets;
+  return (
+    <>
+      <SectionTitle>Alimentação</SectionTitle>
+      <Card className="mx-5 overflow-hidden">
+        <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="press flex w-full items-center gap-3 p-4 text-left">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-good-soft text-good">
+            <Icon name="apple" size={22} />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-[16px] font-semibold">{diet.title}</span>
+            <span className="truncate text-[13px] text-label-2">
+              {diet.meals.length} refeições{tg.kcal ? ` · ${tg.kcal} kcal` : ""}
+              {tg.protein ? ` · ${tg.protein} g de proteína` : ""}
+            </span>
+          </span>
+          <motion.span animate={{ rotate: open ? 90 : 0 }} className="text-label-3">
+            <Icon name="chevron" size={18} />
+          </motion.span>
+        </button>
+        <AnimatePresence>
+          {open && (
+            <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
+              <div className="flex flex-col gap-3 px-4 pb-4">
+                {diet.meals.map((m, i) => (
+                  <div key={i}>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[15px] font-semibold">{m.name}</span>
+                      <span className="text-[13px] text-label-2">{m.time}</span>
+                    </div>
+                    <ul className="mt-1 flex flex-col gap-0.5">
+                      {m.items.map((it, j) => (
+                        <li key={j} className="flex gap-2 text-[14px]">
+                          <span className="text-accent">•</span>
+                          {it}
+                        </li>
+                      ))}
+                    </ul>
+                    {m.notes && <p className="mt-0.5 text-[12px] text-label-2">{m.notes}</p>}
+                  </div>
+                ))}
+                {diet.notes && <p className="rounded-xl bg-card-2 p-3 text-[13px] leading-snug">{diet.notes}</p>}
+                <PdfButton label="Baixar em PDF" filename="minha-alimentacao.pdf" title={diet.title} render={() => <DietSheetPages diet={diet} who={{ student: me, trainer: t.name, cref: t.cref }} />} className="!bg-card-2" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Card>
+    </>
   );
 }

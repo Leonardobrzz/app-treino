@@ -13,12 +13,16 @@ import { AssessmentsTab } from "@/components/personal/AssessmentsTab";
 import { AnamneseTab } from "@/components/personal/AnamneseTab";
 import { PhotosTab } from "@/components/personal/PhotosTab";
 import { FinanceTab } from "@/components/personal/FinanceTab";
+import { DietTab } from "@/components/personal/DietTab";
+import { MealsTab } from "@/components/personal/MealsTab";
 import { ageFrom, studentDetail, type StudentDetail } from "@/lib/personal";
 import { supabase } from "@/lib/supabase/client";
 
 const TABS = [
   ["resumo", "Resumo"],
   ["treino", "Treino"],
+  ["dieta", "Alimentação"],
+  ["diario", "Diário"],
   ["avaliacao", "Avaliação"],
   ["anamnese", "Anamnese"],
   ["fotos", "Fotos"],
@@ -70,6 +74,7 @@ export default function StudentPage() {
     );
 
   const p = d?.profile;
+  const brand = { name: me?.name ?? "Personal", cref: me?.cref ?? null };
   const age = ageFrom(p?.birth_date);
 
   return (
@@ -107,7 +112,9 @@ export default function StudentPage() {
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.18 }}>
             {tab === "resumo" && <StudentSummary d={d} onSaved={load} />}
-            {tab === "treino" && <PlanEditor d={d} onSent={load} />}
+            {tab === "treino" && <PlanEditor d={d} onSent={load} trainer={brand} />}
+            {tab === "dieta" && <DietTab d={d} trainer={brand} />}
+            {tab === "diario" && <MealsTab d={d} />}
             {tab === "avaliacao" && <AssessmentsTab d={d} />}
             {tab === "anamnese" && <AnamneseTab d={d} />}
             {tab === "fotos" && <PhotosTab d={d} />}
