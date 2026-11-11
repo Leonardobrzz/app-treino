@@ -4,8 +4,11 @@ import { introSeen, isStandalone } from "@/lib/install";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Card, Empty, Icon, LinkButton, SectionTitle, Spinner } from "@/components/ui";
+import { CountUp, Stagger, StaggerItem } from "@/components/motion";
+import { myTrainers } from "@/lib/personal";
+import { refreshPush } from "@/lib/push";
 import { checkInToday, getActivePlan, getProfile, lastSetsByExercise, type ActivePlan } from "@/lib/data";
 import { supabase } from "@/lib/supabase/client";
 import type { Profile, SessionSet } from "@/lib/types";
@@ -16,6 +19,8 @@ export default function TodayPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [unread, setUnread] = useState(0);
+  const [coach, setCoach] = useState<{ name: string; todo: number } | null>(null);
   const [plan, setPlan] = useState<ActivePlan | null>(null);
   const [sessionDates, setSessionDates] = useState<string[]>([]);
   const [checkins, setCheckins] = useState<string[]>([]);
@@ -47,6 +52,10 @@ export default function TodayPage() {
         return;
       }
       try {
+        if (localStorage.getItem("convite_personal")) {
+          router.replace("/meu-personal");
+          return;
+        }
         if (localStorage.getItem("convite")) {
           router.replace("/amigos");
           return;
@@ -55,6 +64,16 @@ export default function TodayPage() {
         /* sem storage */
       }
       setProfile(p);
+      refreshPush();
+      supabase().from("notifications").select("id", { count: "exact", head: true }).is("read_at", null).then(({ count }) => setUnread(count ?? 0));
+      myTrainers().then(async (t) => {
+        if (!t.length) return;
+        const [c, a] = await Promise.all([
+          supabase().from("charges").select("id", { count: "exact", head: true }).eq("status", "aberta").eq("student_id", p!.id),
+          supabase().from("anamneses").select("id", { count: "exact", head: true }).is("answered_at", null).eq("student_id", p!.id),
+        ]);
+        setCoach({ name: t[0].name, todo: (c.count ?? 0) + (a.count ?? 0) });
+      });
       setPlan(pl);
       setSessionDates((ses.data ?? []).map((s: { started_at: string }) => s.started_at));
       setCheckins((ci.data ?? []).map((c: { checked_on: string }) => c.checked_on));
@@ -107,37 +126,50 @@ export default function TodayPage() {
           <span className="text-[13px] font-semibold tracking-wide text-label-2">{dateLabel || "\u00a0"}</span>
           <h1 className="text-[34px] font-bold leading-tight tracking-[-0.5px]">{profile?.name ? `Olá, ${profile.name.split(" ")[0]}` : "Hoje"}</h1>
         </div>
-        <Link href="/perfil" aria-label="Perfil" className="press flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-[16px] font-semibold text-accent-ink">
-          {(profile?.name ?? "?").slice(0, 1).toUpperCase()}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/avisos" aria-label={unread ? `Avisos, ${unread} novos` : "Avisos"} className="press relative flex h-10 w-10 items-center justify-center rounded-full bg-card text-accent-ink">
+            <Icon name="bell" size={20} />
+            <AnimatePresence>
+              {unread > 0 && (
+                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={{ type: "spring", stiffness: 600, damping: 15 }} className="tabular absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-bad px-1 text-[11px] font-bold text-white">
+                  {unread > 9 ? "9+" : unread}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </Link>
+          <Link href="/perfil" aria-label="Perfil" className="press flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-[16px] font-semibold text-accent-ink">
+            {(profile?.name ?? "?").slice(0, 1).toUpperCase()}
+          </Link>
+        </div>
       </header>
 
       {loading ? (
         <Spinner />
       ) : (
-        <>
-          <div className="grid grid-cols-2 gap-3 px-5 pt-3">
+        <Stagger delay={0.06}>
+          <StaggerItem className="grid grid-cols-2 gap-3 px-5 pt-3">
             <Card className="flex flex-col gap-1.5 px-4 py-3.5">
               <span className="flex items-center gap-1.5 text-[13px] font-semibold text-accent-ink">
                 <Icon name="flame" size={18} />
                 Sequência
               </span>
               <span className="tabular text-[28px] font-bold tracking-[-0.4px]">
-                {streak} <span className="text-[15px] font-medium text-label-2">{streak === 1 ? "semana" : "semanas"}</span>
+                <CountUp value={streak} /> <span className="text-[15px] font-medium text-label-2">{streak === 1 ? "semana" : "semanas"}</span>
               </span>
             </Card>
             <Card className="flex flex-col gap-1.5 px-4 py-3.5">
               <span className="text-[13px] font-semibold text-label-2">Meta da semana</span>
               <span className="tabular text-[28px] font-bold tracking-[-0.4px]">
-                {doneThisWeek}
+                <CountUp value={doneThisWeek} />
                 <span className="text-[15px] font-medium text-label-2"> de {goal}</span>
               </span>
               <div className="h-1.5 overflow-hidden rounded-full bg-fill">
                 <motion.div className="h-full rounded-full bg-accent" initial={{ width: 0 }} animate={{ width: `${Math.min(100, (doneThisWeek / goal) * 100)}%` }} transition={{ type: "spring", stiffness: 120, damping: 20, delay: 0.15 }} />
               </div>
             </Card>
-          </div>
+          </StaggerItem>
 
+          <StaggerItem>
           <Card className="mx-5 mt-3 flex justify-between px-3 py-3.5">
             {weekDays.map((d) => (
               <div key={d.i} className="flex w-10 flex-col items-center gap-2">
@@ -153,7 +185,22 @@ export default function TodayPage() {
               </div>
             ))}
           </Card>
+          {coach && (
+            <Link href="/meu-personal" className="press mx-5 mt-3 flex items-center gap-3 rounded-2xl bg-card p-3.5">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
+                <Icon name="users" size={20} />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-[15px] font-semibold">Personal: {coach.name}</span>
+                <span className="text-[13px] text-label-2">{coach.todo ? `${coach.todo} ${coach.todo === 1 ? "pendência" : "pendências"} (pagamento ou anamnese)` : "Avaliações, pagamentos e desafios"}</span>
+              </span>
+              {coach.todo > 0 && <span className="h-2.5 w-2.5 rounded-full bg-accent" />}
+              <Icon name="chevron" size={17} className="text-label-3" />
+            </Link>
+          )}
+          </StaggerItem>
 
+          <StaggerItem>
           <SectionTitle action={<Link href="/treinos" className="text-[15px] text-accent-ink">Minha semana</Link>}>Treino de hoje</SectionTitle>
 
           {!plan || plan.plan_days.length === 0 ? (
@@ -223,7 +270,9 @@ export default function TodayPage() {
               )}
             </Card>
           )}
+          </StaggerItem>
 
+          <StaggerItem>
           {suggestions.length > 0 && (
             <Card className="mx-5 mt-4 flex items-start gap-3 p-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-good-soft text-good">
@@ -253,6 +302,9 @@ export default function TodayPage() {
             </Link>
           )}
 
+          </StaggerItem>
+
+          <StaggerItem>
           <Link href="/nutricao" className="press mx-5 mt-4 flex items-center gap-4 rounded-2xl bg-card p-4">
             <div className="relative h-14 w-14 shrink-0">
               <svg viewBox="0 0 56 56" className="h-14 w-14 -rotate-90" aria-hidden="true">
@@ -266,17 +318,19 @@ export default function TodayPage() {
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <span className="text-[15px] font-semibold">Nutrição</span>
               <span className="tabular text-[14px] text-label-2">
-                <b className="text-label">{Math.round(food.kcal).toLocaleString("pt-BR")}</b> de {nt.kcal.toLocaleString("pt-BR")} kcal · água {num(food.water / 1000, 2)} de {num(nt.water / 1000, 2)} L
+                <CountUp value={food.kcal} className="font-bold text-label" /> de {nt.kcal.toLocaleString("pt-BR")} kcal · água {num(food.water / 1000, 2)} de {num(nt.water / 1000, 2)} L
               </span>
             </div>
             <Icon name="chevron" size={18} className="text-label-3" />
           </Link>
 
-          <div className="mx-5 mt-3 grid grid-cols-2 gap-3">
+          </StaggerItem>
+
+          <StaggerItem className="mx-5 mt-3 grid grid-cols-2 gap-3">
             <button onClick={doCheckIn} disabled={checkedToday} className="press flex flex-col items-start gap-2 rounded-2xl bg-card p-4 text-left disabled:opacity-100">
-              <div className={`flex h-9 w-9 items-center justify-center rounded-[10px] ${checkedToday ? "bg-good-soft text-good" : "bg-accent-soft text-accent-ink"}`}>
+              <motion.div key={String(checkedToday)} initial={checkedToday ? { scale: 0.4, rotate: -30 } : false} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 500, damping: 12 }} className={`flex h-9 w-9 items-center justify-center rounded-[10px] ${checkedToday ? "bg-good-soft text-good" : "bg-accent-soft text-accent-ink"}`}>
                 <Icon name={checkedToday ? "check" : "pin"} size={20} stroke={checkedToday ? 3 : 2} />
-              </div>
+              </motion.div>
               <span className="text-[15px] font-semibold">{checkedToday ? "Check-in feito" : "Fazer check-in"}</span>
               <span className="text-[13px] text-label-2">{checkedToday ? "Presença registrada hoje" : "Marque que foi à academia"}</span>
             </button>
@@ -287,8 +341,8 @@ export default function TodayPage() {
               <span className="text-[15px] font-semibold">Perguntar à IA</span>
               <span className="text-[13px] text-label-2">Dúvidas e ajustes no treino</span>
             </Link>
-          </div>
-        </>
+          </StaggerItem>
+        </Stagger>
       )}
     </>
   );

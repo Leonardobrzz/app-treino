@@ -47,6 +47,16 @@ export default function WeekPage() {
         <Spinner />
       ) : (
         <>
+          {(plan as { trainer_id?: string | null } | null)?.trainer_id && (
+            <Link href="/meu-personal" className="press mx-5 mt-3 flex items-center gap-3 rounded-2xl bg-accent p-4 text-on-accent">
+              <Icon name="users" size={22} />
+              <span className="flex flex-1 flex-col">
+                <span className="text-[16px] font-semibold">Treino montado pelo seu personal</span>
+                <span className="text-[13px] opacity-90">{plan!.name}</span>
+              </span>
+              <Icon name="chevron" size={18} />
+            </Link>
+          )}
           <Link href="/ia?prompt=monte" className="press mx-5 mt-3 flex items-center gap-3 rounded-2xl bg-accent-soft p-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-on-accent">
               <Icon name="spark" size={22} />

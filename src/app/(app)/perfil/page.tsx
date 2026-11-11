@@ -110,6 +110,9 @@ export default function ProfilePage() {
       <Card className="mx-5 mt-4 overflow-hidden">
         {[
           ...(admin ? [{ href: "/admin", icon: "chart" as const, label: "Painel do dono" }] : []),
+          { href: p.is_trainer ? "/personal" : "/personal/comecar", icon: "clipboard" as const, label: p.is_trainer ? "Área do personal" : "Sou personal trainer" },
+          { href: "/meu-personal", icon: "users" as const, label: "Meu personal" },
+          { href: "/avisos", icon: "bell" as const, label: "Avisos e notificações" },
           { href: "/medidas", icon: "ruler" as const, label: "Peso e medidas" },
           { href: "/exercicios", icon: "dumbbell" as const, label: "Biblioteca de exercícios" },
           { href: "/ia", icon: "spark" as const, label: "Assistente de treino" },

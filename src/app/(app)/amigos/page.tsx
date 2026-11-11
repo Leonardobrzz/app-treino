@@ -120,7 +120,7 @@ export default function FriendsPage() {
 
   return (
     <>
-      <Header title="Amigos" back={{ href: "/evolucao", label: "Evolução" }} />
+      <Header title="Amigos" back={{ href: "/feed", label: "Feed" }} />
 
       <AnimatePresence>
         {msg && (

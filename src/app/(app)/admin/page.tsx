@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Card, Header, Icon, SectionTitle, Segmented, Spinner, Stat } from "@/components/ui";
+import { AdminReports } from "@/components/AdminReports";
 import { PRICES, brl } from "@/lib/pro";
 import { supabase } from "@/lib/supabase/client";
 import { fmtDate } from "@/lib/util";
@@ -174,6 +175,8 @@ export default function Admin() {
             <Stat label="Mensagens pra IA (mês)" value={String(ov.ai_chat_pro_month + ov.ai_chat_free_month)} foot={`${ov.ai_chat_pro_month} Pro · ${ov.ai_chat_free_month} grátis`} />
             <Stat label="Fotos e fichas (mês)" value={String(ov.ai_food_month + ov.ai_ficha_month)} foot={`${ov.ai_food_month} pratos · ${ov.ai_ficha_month} fichas`} />
           </div>
+
+          <AdminReports />
 
           <SectionTitle>Usuários</SectionTitle>
           <div className="mx-5 flex flex-col gap-3">

@@ -41,8 +41,19 @@ function measuresAt(records: BodyMeasurement[], date: string) {
   return when ? { date: when, values: vals } : null;
 }
 
-export async function loadReport(from: string, to: string): Promise<ReportData> {
+type Raw = { profile: Profile | null; sessions: unknown[]; sets?: unknown[]; measurements: unknown[]; weights: unknown[]; meals: unknown[]; photos: unknown[] };
+
+/** Dados do próprio usuário (RLS) ou, com `student`, do aluno do personal (função que confere o vínculo) */
+async function loadRaw(from: string, to: string, student?: string): Promise<Raw> {
   const sb = supabase();
+  if (student) {
+    const { data, error } = await sb.rpc("trainer_report_raw", { p_student: student, p_to: to });
+    if (error) throw error;
+    const r = data as Raw;
+    const meals = (r.meals as { eaten_on: string }[]).filter((m) => m.eaten_on >= from);
+    const photos = (r.photos as { taken_on: string }[]).filter((f) => f.taken_on >= from && f.taken_on <= to);
+    return { ...r, meals, photos };
+  }
   const toEnd = `${to}T23:59:59`;
   const [prof, ses, meas, wts, meals, photos] = await Promise.all([
     sb.from("profiles").select("*").maybeSingle(),
@@ -52,14 +63,26 @@ export async function loadReport(from: string, to: string): Promise<ReportData> 
     sb.from("meals").select("eaten_on,kcal,protein,carbs,fat").gte("eaten_on", from).lte("eaten_on", to),
     sb.from("progress_photos").select("*").eq("pose", "frente").gte("taken_on", from).lte("taken_on", to).order("taken_on"),
   ]);
-  const profile = (prof.data ?? null) as Profile | null;
+  return { profile: prof.data as Profile | null, sessions: ses.data ?? [], measurements: meas.data ?? [], weights: wts.data ?? [], meals: meals.data ?? [], photos: photos.data ?? [] };
+}
+
+export async function loadReport(from: string, to: string, student?: string): Promise<ReportData> {
+  const sb = supabase();
+  const raw = await loadRaw(from, to, student);
+  const ses = { data: raw.sessions };
+  const meas = { data: raw.measurements };
+  const wts = { data: raw.weights };
+  const meals = { data: raw.meals };
+  const photos = { data: raw.photos };
+  const profile = raw.profile;
 
   // treinos: os do período + o histórico anterior (pra saber o que é recorde)
   const allSes = (ses.data ?? []) as { id: string; started_at: string; finished_at: string }[];
   const inP = allSes.filter((s) => day(s.started_at) >= from);
   const sesDate = new Map(allSes.map((s) => [s.id, s.started_at]));
   let rows: SetRow[] = [];
-  if (allSes.length) {
+  if (raw.sets) rows = raw.sets as SetRow[];
+  else if (allSes.length) {
     const { data } = await sb.from("session_sets").select("weight,reps,exercise_id,session_id,exercises(name,muscle_group)").eq("done", true).in("session_id", allSes.map((s) => s.id)).limit(20000);
     rows = (data ?? []) as unknown as SetRow[];
   }

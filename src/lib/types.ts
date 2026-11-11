@@ -21,6 +21,7 @@ export type PlanExercise = {
   target_weight: number | null;
   rest_seconds: number;
   notes: string | null;
+  method?: string | null;
   exercises?: Exercise;
 };
 
@@ -83,6 +84,15 @@ export type Profile = {
   fat_target: number | null;
   water_target_ml: number | null;
   friend_code: string;
+  is_trainer?: boolean;
+  trainer_code?: string | null;
+  cref?: string | null;
+  trainer_bio?: string | null;
+  trainer_city?: string | null;
+  whatsapp?: string | null;
+  pix_key?: string | null;
+  pix_name?: string | null;
+  showcase_public?: boolean;
 };
 
 export type ProgressPhoto = { id: string; taken_on: string; pose: "frente" | "lado" | "costas"; path: string; created_at: string };

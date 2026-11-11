@@ -89,6 +89,11 @@ O visual segue as diretrizes de design da Apple (Human Interface Guidelines): fu
 - [x] **Card pra story**: no fim do treino gera uma imagem 1080×1920 com volume, séries, tempo, recordes e exercícios, e abre o compartilhar do celular
 - [x] **Resumo da semana**: treinos x meta, volume vs semana anterior, recordes, séries por músculo, alimentação e peso, + sugestões da IA pra próxima semana (Pro)
 - [x] **Amigos**: link de convite e ranking semanal (treinos, volume, séries). Os amigos só veem esses totais
+- [x] **Feed dos amigos**: posta o treino com foto (volume, duração, exercícios e recorde por cima da imagem) ou só foto e texto. Curtir com dois toques, comentários, denunciar e bloquear. É fechado: só você e seus amigos veem. Post com 3 denúncias some sozinho, e as denúncias aparecem no painel do dono
+- [x] **Área do personal** (grátis por enquanto): o personal ativa no Perfil e convida alunos por link ou código. Painel com radar (quem sumiu, volume caindo, mensalidade atrasada, plano vencendo, sem anamnese ou reavaliação, quem bateu recorde) e mensagens prontas no WhatsApp. Por aluno: resumo (frequência, cargas de cada treino, peso, medidas), montar e enviar treino com métodos (bi-set, drop, pirâmide, rest-pause…) ou automático pelo perfil do aluno, avaliação física (Pollock 3 e 7 + Siri, perimetria, postural por fotos com grade e linha de prumo, comparação com a anterior), anamnese com PAR-Q, fotos de progresso, relatório em PDF com o nome e CREF do personal e financeiro. Agenda de aulas, cobranças do mês, desafios com ranking entre os alunos e vitrine pública com antes e depois (só com autorização do aluno)
+- [x] **Lado do aluno do personal**: "Meu personal" com anamnese pra responder, Pix copia e cola e QR Code com o valor (o dinheiro cai direto na chave do personal, sem passar pelo Carga), envio de comprovante, próximas aulas, desafios, avaliação física e controle de privacidade (ranking e vitrine). O treino enviado aparece em Treinos com o método de cada exercício
+- [x] **Avisos e push**: sininho no Hoje e notificação no celular (web push) pra treino novo, anamnese, avaliação, cobrança, pagamento confirmado, aula marcada e desafio. Um cron diário (Vercel) gera as mensalidades, lembra cobrança vencendo ou atrasada, plano acabando, aluno sumido e aula do dia seguinte
+- [x] **Animações**: confete e números subindo no fim do treino, cards entrando em sequência no Hoje, coração ao curtir, abas com efeito de toque
 - [x] **Relatório em PDF** (Pro): escolhe o período (30 dias, 3/6 meses, 1 ano ou datas livres) e gera um PDF de 3 páginas com resumo, destaques, peso, mapa do corpo colorido (laranja cresceu, verde diminuiu) com a tabela de medidas, antes e depois das fotos, força por exercício, recordes, séries por músculo e alimentação. Abre o compartilhar do celular pra mandar pro personal ou nutri
 - [x] **Fotos de progresso**: frente, lado e costas, com antes/depois deslizante e a diferença de peso e medidas entre as datas (Pro, armazenamento privado)
 
@@ -207,6 +212,9 @@ O app abre em `http://localhost:3000`.
 | `STRIPE_PRICE_MONTHLY` / `STRIPE_PRICE_YEARLY` | IDs dos preços do Carga Pro |
 | `SUBSCRIPTION_SYNC_SECRET` | Segredo que autoriza o webhook a gravar a assinatura no banco |
 | `NEXT_PUBLIC_STRIPE_TEST` | `1` para mostrar a dica do cartão de teste na tela do Pro |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Chaves do web push (`npx web-push generate-vapid-keys`) |
+| `VAPID_SUBJECT` | Contato do push (`mailto:...`) |
+| `CRON_SECRET` | Autoriza o cron diário `/api/cron/lembretes` (a Vercel manda sozinha); o mesmo valor fica em `private.app_secrets` com a chave `cron` |
 
 ### Configurando o Supabase do zero
 
@@ -288,6 +296,10 @@ src/
 │   │   ├── importar/      importar ficha da academia
 │   │   ├── resumo/        resumo da semana
 │   │   ├── amigos/        convite e ranking semanal
+│   │   ├── feed/          feed dos amigos e novo post
+│   │   ├── personal/      área do personal (painel, alunos, aluno/[id], agenda, cobranças, desafios, perfil)
+│   │   ├── meu-personal/  lado do aluno (Pix, comprovante, anamnese)
+│   │   ├── avisos/        avisos e ativar notificações
 │   │   ├── fotos/         fotos de progresso (antes e depois)
 │   │   ├── ia/            chat com o assistente
 │   │   ├── admin/         painel do dono (números do app)

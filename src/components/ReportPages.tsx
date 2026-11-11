@@ -92,7 +92,7 @@ export function reportHighlights(d: ReportData) {
   return out.slice(0, 5);
 }
 
-export function ReportPages({ d }: { d: ReportData }) {
+export function ReportPages({ d, trainer }: { d: ReportData; trainer?: { name: string; cref: string | null } | null }) {
   const total = 3;
   const period = `${fmtDate(d.from, { year: true })} a ${fmtDate(d.to, { year: true })}`;
   const name = d.profile?.name?.trim() || "Você";
@@ -129,6 +129,12 @@ export function ReportPages({ d }: { d: ReportData }) {
           <p className="mt-2 text-[16px] text-[#6e6e73]">
             {period} · gerado em {fmtDate(new Date().toISOString(), { year: true })}
           </p>
+          {trainer && (
+            <p className="mt-1 text-[15px] font-semibold" style={{ color: INK }}>
+              Acompanhamento: {trainer.name}
+              {trainer.cref ? ` · CREF ${trainer.cref}` : ""}
+            </p>
+          )}
         </div>
 
         <div className="mt-7 grid grid-cols-3 gap-3">

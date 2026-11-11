@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ProBadge } from "@/components/ProLock";
 import { PAGE_H, PAGE_W, ReportPages } from "@/components/ReportPages";
 import { Header, Icon, Segmented, Spinner } from "@/components/ui";
-import { getSubscription } from "@/lib/data";
+import { getProfile, getSubscription } from "@/lib/data";
 import { isPro } from "@/lib/pro";
 import { loadReport, type ReportData } from "@/lib/report";
 import { todayISO, vibrate } from "@/lib/util";
@@ -31,7 +31,17 @@ export default function Relatorio() {
   const wrap = useRef<HTMLDivElement>(null);
   const pages = useRef<HTMLDivElement>(null);
 
+  const [student, setStudent] = useState<string | null>(null);
+  const [trainer, setTrainer] = useState<{ name: string; cref: string | null } | null>(null);
+
   useEffect(() => {
+    const aluno = new URLSearchParams(location.search).get("aluno");
+    if (aluno) {
+      // personal gerando o relatório de um aluno: liberado e com a marca dele
+      setStudent(aluno);
+      getProfile().then((p) => p && setTrainer({ name: p.name ?? "Personal", cref: p.cref ?? null }));
+      return;
+    }
     getSubscription().then((s) => setPro(isPro(s)));
   }, []);
 
@@ -45,11 +55,12 @@ export default function Relatorio() {
   useEffect(() => {
     if (!from || !to || from > to) return;
     setLoading(true);
-    loadReport(from, to).then((d) => {
-      setData(d);
-      setLoading(false);
-    });
-  }, [from, to]);
+    if (student === null && new URLSearchParams(location.search).get("aluno")) return;
+    loadReport(from, to, student ?? undefined)
+      .then((d) => setData(d))
+      .catch(() => setMsg("Não consegui carregar os dados desse aluno."))
+      .finally(() => setLoading(false));
+  }, [from, to, student]);
 
   useEffect(() => {
     const fit = () => wrap.current && setScale(Math.min(1, wrap.current.clientWidth / PAGE_W));
@@ -72,7 +83,8 @@ export default function Relatorio() {
         if (i) pdf.addPage();
         pdf.addImage(img, "JPEG", 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
       }
-      const name = `carga-relatorio-${from}-a-${to}.pdf`;
+      const who = student && data.profile?.name ? `-${data.profile.name.split(" ")[0].toLowerCase()}` : "";
+      const name = `carga-relatorio${who}-${from}-a-${to}.pdf`;
       const blob = pdf.output("blob");
       const file = new File([blob], name, { type: "application/pdf" });
       if (navigator.canShare?.({ files: [file] })) {
@@ -95,12 +107,12 @@ export default function Relatorio() {
     } finally {
       setBusy("");
     }
-  }, [data, from, to]);
+  }, [data, from, to, student]);
 
   return (
     <>
-      <Header title="Relatório em PDF" back={{ href: "/evolucao", label: "Evolução" }} />
-      <p className="px-5 text-[15px] leading-snug text-label-2">Medidas, corpo, peso, força e alimentação do período, num PDF pra guardar ou mandar pro seu personal ou nutri.</p>
+      <Header title={student ? "Relatório do aluno" : "Relatório em PDF"} back={student ? { href: `/personal/aluno/${student}`, label: "Aluno" } : { href: "/evolucao", label: "Evolução" }} />
+      <p className="px-5 text-[15px] leading-snug text-label-2">{student ? "Medidas, corpo, peso, força e alimentação do aluno no período, com o seu nome e CREF, pra mandar pra ele." : "Medidas, corpo, peso, força e alimentação do período, num PDF pra guardar ou mandar pro seu personal ou nutri."}</p>
 
       <div className="mt-4 flex flex-col gap-3 px-5">
         <Segmented<Preset>
@@ -150,7 +162,7 @@ export default function Relatorio() {
           <div aria-hidden={!pro} className={pro ? "" : "pointer-events-none select-none blur-[3px]"}>
             <div style={{ height: PAGE_H * 3 * scale + 24 }}>
               <div ref={pages} className="flex flex-col gap-[24px]" style={{ width: PAGE_W, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-                <ReportPages d={data} />
+                <ReportPages d={data} trainer={trainer} />
               </div>
             </div>
           </div>

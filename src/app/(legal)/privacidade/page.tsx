@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Política de privacidade · Carga" }
 
 export default function Privacidade() {
   return (
-    <LegalPage title="Política de privacidade" updated="9 de novembro de 2026">
+    <LegalPage title="Política de privacidade" updated="11 de novembro de 2026">
       <p>
         Esta política explica quais dados o Carga coleta, para que usa e quais são seus direitos, de acordo com a Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018). O controlador dos
         dados é {OWNER}. Contato do encarregado: <Mail />.
@@ -20,7 +20,12 @@ export default function Privacidade() {
           <li><b className="text-label">Treinos:</b> fichas, exercícios, séries, cargas, check-ins e como você estava no dia (disposição e áreas com dor, se você informar).</li>
           <li><b className="text-label">Corpo e alimentação:</b> medidas, refeições, água, metas de nutrição e fotos de progresso.</li>
           <li><b className="text-label">IA:</b> mensagens trocadas com o assistente e fotos de pratos ou de fichas enviadas para análise.</li>
-          <li><b className="text-label">Social:</b> seu código de amigo e a lista de amigos que você adicionar.</li>
+          <li><b className="text-label">Social:</b> seu código de amigo, a lista de amigos que você adicionar e o que você postar no feed (fotos, legendas, curtidas e comentários).</li>
+          <li>
+            <b className="text-label">Personal trainer:</b> se você entrar como aluno de um personal, a anamnese que responder, avaliações físicas (dobras, medidas e fotos de postura), cobranças,
+            comprovantes e aulas marcadas. Se você for personal, sua chave Pix, CREF, cidade e WhatsApp.
+          </li>
+          <li><b className="text-label">Notificações:</b> o endereço técnico do seu aparelho para enviar avisos, se você ativar.</li>
           <li>
             <b className="text-label">Assinatura:</b> status do plano e identificadores da Stripe. Os dados do cartão ficam com a Stripe; não temos acesso a eles.
           </li>
@@ -55,6 +60,11 @@ export default function Privacidade() {
           <li><b className="text-label">Stripe:</b> pagamentos.</li>
           <li><b className="text-label">Resend:</b> envio de e-mails.</li>
         </ul>
+        <p>
+          Quando você entra como aluno de um personal pelo link ou código dele, esse personal passa a ver seus treinos, cargas, peso, medidas, fotos de progresso, anamnese e avaliações, para
+          acompanhar você. Você pode sair a qualquer momento em “Meu personal”, e ele deixa de ver tudo na hora. Fotos de antes e depois só vão para a vitrine pública do personal se você
+          autorizar, e saem quando você desligar a autorização. Os pagamentos por Pix vão direto para a conta do personal; o Carga não recebe nem guarda esse dinheiro.
+        </p>
         <p>
           Alguns desses fornecedores guardam dados fora do Brasil (por exemplo, nos Estados Unidos), com garantias contratuais de proteção, conforme a LGPD. Amigos que você adicionar veem
           apenas seu nome e o resumo do ranking da semana (número de treinos, séries, volume total e data do último treino) — nunca suas cargas por exercício, medidas, alimentação ou

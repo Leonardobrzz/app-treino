@@ -11,12 +11,14 @@ import { ExerciseGuideSheet, type GuideExercise } from "@/components/ExerciseGui
 import { alternativesFor } from "@/lib/plan-generator";
 import { MODE_TEXT, PAIN_AREAS, dayMode, lighter, painFor, type PainArea, type Readiness } from "@/lib/readiness";
 import { drawWorkoutCard, shareImage } from "@/lib/share-card";
+import { Confetti, CountUp } from "@/components/motion";
+import { METHODS, methodLabel } from "@/lib/personal";
 import { supabase } from "@/lib/supabase/client";
 import type { Exercise, SessionSet } from "@/lib/types";
 import { epley, fmtDate, mmss, num, repRange, suggest, todayISO, vibrate } from "@/lib/util";
 
 type SetRow = { id?: string; set_number: number; weight: string; reps: string; done: boolean };
-type Block = { peId: string; exerciseId: string; name: string; equipment: string; group: string; reps: string; rest: number; notes: string | null; prev: SessionSet[]; sug: ReturnType<typeof suggest>; sets: SetRow[]; plannedSets: number; pain: PainArea | null; later?: boolean };
+type Block = { peId: string; exerciseId: string; name: string; equipment: string; group: string; reps: string; rest: number; notes: string | null; method?: string | null; prev: SessionSet[]; sug: ReturnType<typeof suggest>; sets: SetRow[]; plannedSets: number; pain: PainArea | null; later?: boolean };
 
 type SessionMeta = { readiness: Readiness | null; swaps: Record<string, string>; skipped: string[]; later?: string[] };
 const w2s = (w: number) => (w ? String(w).replace(".", ",") : "");
@@ -110,7 +112,7 @@ export default function LiveWorkout() {
         const m = mine.find((x) => x.set_number === i + 1);
         return m ? { id: m.id, set_number: i + 1, weight: w2s(Number(m.weight)) || "0", reps: String(m.reps), done: m.done } : { set_number: i + 1, weight: w2s(baseW), reps: String(baseR || ""), done: false };
       });
-      return { peId: pe.id, exerciseId: ex.id, name: ex.name, equipment: ex.equipment, group: ex.muscle_group, reps: pe.reps, rest: pe.rest_seconds, notes: pe.notes, prev, sug, sets, plannedSets: pe.sets, pain: null };
+      return { peId: pe.id, exerciseId: ex.id, name: ex.name, equipment: ex.equipment, group: ex.muscle_group, reps: pe.reps, rest: pe.rest_seconds, notes: pe.notes, method: pe.method ?? null, prev, sug, sets, plannedSets: pe.sets, pain: null };
     });
     // exercícios deixados "pra depois" (máquina ocupada) vão pro fim, na ordem em que foram adiados
     const later = meta.current.later ?? [];
@@ -351,6 +353,12 @@ export default function LiveWorkout() {
                   {b.later && <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold normal-case tracking-normal text-accent-ink">Deixado pra depois</span>}
                 </span>
                 <h2 className="text-[20px] font-bold leading-tight">{b.name}</h2>
+                {methodLabel(b.method) && (
+                  <span className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[12px] text-label-2">
+                    <span className="rounded-full bg-accent px-2 py-0.5 font-bold text-on-accent">{methodLabel(b.method)}</span>
+                    {METHODS.find((m) => m.value === b.method)?.hint}
+                  </span>
+                )}
                 <span className="text-[14px] text-label-2">Meta: {b.sets.length} × {b.reps}</span>
                 <button onClick={() => setGuide({ name: b.name, muscle_group: b.group, equipment: b.equipment })} className="mt-1 flex items-center gap-1 self-start text-[14px] font-semibold text-accent-ink">
                   <Icon name="play" size={12} /> Como fazer
@@ -494,6 +502,7 @@ export default function LiveWorkout() {
         onLater={() => swapIdx != null && doLater(swapIdx)}
       />
 
+      <Confetti active={!!summary} count={summary?.prs.length ? 110 : 70} />
       <AnimatePresence>
         {summary && (
           <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -504,26 +513,31 @@ export default function LiveWorkout() {
               <h2 className="text-[26px] font-bold">Treino concluído</h2>
               <p className="text-[15px] text-label-2">{day.title}</p>
               <div className="mt-5 grid grid-cols-3 gap-2">
-                {[
-                  ["Volume", `${num(summary.volume / 1000, 1)} t`],
-                  ["Séries", String(summary.sets)],
-                  ["Tempo", `${summary.minutes} min`],
-                ].map(([l, v]) => (
-                  <div key={l} className="rounded-xl bg-card-2 py-3">
+                {(
+                  [
+                    ["Volume", summary.volume / 1000, (v: number) => `${num(v, 1)} t`],
+                    ["Séries", summary.sets, (v: number) => String(Math.round(v))],
+                    ["Tempo", summary.minutes, (v: number) => `${Math.round(v)} min`],
+                  ] as const
+                ).map(([l, v, f], i) => (
+                  <motion.div key={l} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 + i * 0.08, type: "spring", stiffness: 380, damping: 26 }} className="rounded-xl bg-card-2 py-3">
                     <div className="text-[12px] font-semibold text-label-2">{l}</div>
-                    <div className="tabular text-[20px] font-bold">{v}</div>
-                  </div>
+                    <CountUp value={v} format={f} duration={1.1} className="text-[20px] font-bold" />
+                  </motion.div>
                 ))}
               </div>
               {summary.prs.length > 0 && (
-                <div className="mt-4 rounded-xl bg-good-soft p-3 text-left text-[14px] text-good">
+                <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: [0.8, 1.06, 1] }} transition={{ delay: 0.6, duration: 0.5 }} className="mt-4 rounded-xl bg-good-soft p-3 text-left text-[14px] text-good">
                   <b>Novo recorde!</b> {summary.prs.join(", ")}
-                </div>
+                </motion.div>
               )}
-              <Button size="lg" className="mt-5 w-full" disabled={sharing} onClick={shareCard}>
+              <Button size="lg" className="mt-5 w-full" onClick={() => router.replace(`/feed/novo?sessao=${sessionId}${summary.prs.length ? `&prs=${encodeURIComponent(summary.prs.join("|"))}` : ""}`)}>
+                <Icon name="feed" size={18} /> Postar no feed
+              </Button>
+              <Button size="lg" variant="secondary" className="mt-2 w-full" disabled={sharing} onClick={shareCard}>
                 <Icon name="send" size={18} /> {sharing ? "Gerando imagem…" : "Postar no story"}
               </Button>
-              <Button size="lg" variant="secondary" className="mt-2 w-full" onClick={() => router.replace("/")}>
+              <Button size="lg" variant="plain" className="mt-1 w-full" onClick={() => router.replace("/")}>
                 Fechar
               </Button>
             </motion.div>

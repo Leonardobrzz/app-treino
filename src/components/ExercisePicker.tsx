@@ -21,7 +21,9 @@ export function ExerciseList({
   selected,
   onToggle,
   onCreated,
+  catalogOnly,
 }: {
+  catalogOnly?: boolean;
   selectable?: boolean;
   selected?: Set<string>;
   onToggle?: (e: Exercise) => void;
@@ -42,8 +44,8 @@ export function ExerciseList({
   const list = useMemo(() => {
     const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
     const nq = norm(q.trim());
-    return all.filter((e) => (!group || e.muscle_group === group || e.secondary.includes(group)) && (!nq || norm(e.name).includes(nq) || norm(e.muscle_group).includes(nq)));
-  }, [all, q, group]);
+    return all.filter((e) => (!catalogOnly || !e.created_by) && (!group || e.muscle_group === group || e.secondary.includes(group)) && (!nq || norm(e.name).includes(nq) || norm(e.muscle_group).includes(nq)));
+  }, [all, q, group, catalogOnly]);
 
   async function create() {
     const name = q.trim();
@@ -97,7 +99,7 @@ export function ExerciseList({
         })}
         {list.length === 0 && <li className="px-4 py-6 text-center text-[15px] text-label-2">Nenhum exercício encontrado.</li>}
       </ul>
-      {q.trim().length > 2 && !all.some((e) => e.name.toLowerCase() === q.trim().toLowerCase()) && (
+      {!catalogOnly && q.trim().length > 2 && !all.some((e) => e.name.toLowerCase() === q.trim().toLowerCase()) && (
         <div className="rounded-2xl bg-card p-4">
           {!creating ? (
             <button onClick={() => setCreating(true)} className="press flex w-full items-center gap-2 text-[16px] font-semibold text-accent-ink">
