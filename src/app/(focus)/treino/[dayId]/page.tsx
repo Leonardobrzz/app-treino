@@ -11,12 +11,13 @@ import { loadExercises } from "@/components/ExercisePicker";
 import { ExerciseGuideSheet, type GuideExercise } from "@/components/ExerciseGuide";
 import { alternativesFor } from "@/lib/plan-generator";
 import { MODE_TEXT, PAIN_AREAS, dayMode, lighter, painFor, type PainArea, type Readiness } from "@/lib/readiness";
-import { drawWorkoutCard, shareImage } from "@/lib/share-card";
+import type { CardData } from "@/lib/share-card";
+import { StorySheet } from "@/components/StorySheet";
 import { Confetti, CountUp } from "@/components/motion";
 import { METHODS, methodLabel } from "@/lib/personal";
 import { supabase } from "@/lib/supabase/client";
 import type { Exercise, SessionSet } from "@/lib/types";
-import { epley, fmtDate, mmss, num, repRange, suggest, todayISO, vibrate } from "@/lib/util";
+import { epley, mmss, num, repRange, suggest, todayISO, vibrate } from "@/lib/util";
 
 type SetRow = { id?: string; set_number: number; weight: string; reps: string; done: boolean };
 type Block = { peId: string; exerciseId: string; name: string; equipment: string; group: string; reps: string; rest: number; notes: string | null; method?: string | null; prev: SessionSet[]; sug: ReturnType<typeof suggest>; sets: SetRow[]; plannedSets: number; pain: PainArea | null; later?: boolean };
@@ -48,6 +49,7 @@ export default function LiveWorkout() {
   const [now, setNow] = useState(Date.now());
   const [rest, setRest] = useState<{ end: number; total: number } | null>(null);
   const [plates, setPlates] = useState<number | null>(null);
+  const [story, setStory] = useState<CardData | null>(null);
   const [summary, setSummary] = useState<{ volume: number; sets: number; minutes: number; prs: string[] } | null>(null);
   const [confirmQuit, setConfirmQuit] = useState(false);
   const [readiness, setReadiness] = useState<Readiness | null>(null);
@@ -281,8 +283,22 @@ export default function LiveWorkout() {
           return { name: b.name, best: `${done.length}× · ${best.weight || 0} kg × ${best.reps}` };
         })
         .filter((x) => x !== null);
-      const blob = await drawWorkoutCard({ title: day.title, dateLabel: fmtDate(todayISO()), volumeKg: summary.volume, sets: summary.sets, minutes: summary.minutes, prs: summary.prs, exercises });
-      await shareImage(blob, `carga-${todayISO()}.png`, summary.prs.length ? `Recorde no ${summary.prs[0]}! 🏆` : `Treino de hoje: ${day.title} ✅`);
+      const m0 = new Date();
+      m0.setDate(1);
+      m0.setHours(0, 0, 0, 0);
+      const { count } = await supabase().from("sessions").select("id", { count: "exact", head: true }).not("finished_at", "is", null).gte("started_at", m0.toISOString());
+      setStory({
+        title: day.title,
+        dateLabel: new Date(startedAt).toLocaleDateString("pt-BR"),
+        time: new Date(startedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        volumeKg: summary.volume,
+        sets: summary.sets,
+        minutes: summary.minutes,
+        prs: summary.prs,
+        exercises,
+        exerciseCount: exercises.length,
+        monthCount: count ?? undefined,
+      });
     } finally {
       setSharing(false);
     }
@@ -493,6 +509,7 @@ export default function LiveWorkout() {
       </Sheet>
 
       <ReadinessSheet open={askReady} onDone={startWith} />
+      <StorySheet open={!!story} onClose={() => setStory(null)} data={story} filename={`carga-${todayISO()}.jpg`} />
       <ExerciseGuideSheet exercise={guide} onClose={() => setGuide(null)} />
 
       <SwapSheet
@@ -506,7 +523,7 @@ export default function LiveWorkout() {
 
       <Confetti active={!!summary} count={summary?.prs.length ? 110 : 70} />
       <AnimatePresence>
-        {summary && (
+        {summary && !story && (
           <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <motion.div initial={{ scale: 0.8, y: 40 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring", stiffness: 300, damping: 22 }} className="w-full max-w-[380px] rounded-[28px] bg-card p-6 text-center">
               <motion.div initial={{ rotate: -20, scale: 0 }} animate={{ rotate: 0, scale: 1 }} transition={{ delay: 0.15, type: "spring", stiffness: 400, damping: 14 }} className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent text-on-accent">
@@ -537,7 +554,7 @@ export default function LiveWorkout() {
                 <Icon name="feed" size={18} /> Postar no feed
               </Button>
               <Button size="lg" variant="secondary" className="mt-2 w-full" disabled={sharing} onClick={shareCard}>
-                <Icon name="send" size={18} /> {sharing ? "Gerando imagem…" : "Postar no story"}
+                <Icon name="send" size={18} /> {sharing ? "Preparando…" : "Postar no story"}
               </Button>
               <Button size="lg" variant="plain" className="mt-1 w-full" onClick={() => router.replace("/")}>
                 Fechar

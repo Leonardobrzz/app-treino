@@ -15,6 +15,7 @@ const ALUNO: Section[] = [
     items: [
       { q: "Como monto meu treino?", a: "Em Treinos, toque em um dia da semana e adicione os exercícios com séries, repetições e carga. Se preferir, use \"Montar com IA\" e descreva o que quer (ex.: ABC, 4x na semana) ou importe a foto da ficha da academia.", href: "/treinos", go: "Abrir Treinos" },
       { q: "Como registro um treino?", a: "Na tela Hoje, toque em \"Iniciar treino\". Em cada exercício, confira a carga e marque cada série quando terminar. No fim, finalize pra salvar e ver o resumo.", href: "/", go: "Ir pra Hoje" },
+      { q: "Tenho dor ou lesão. O treino automático leva isso em conta?", a: "Sim. No cadastro (ou em Perfil → Dores ou lesões) marque onde sente dor. O app tira os exercícios que mais forçam a região e coloca cuidados nos que ficam. Mesmo assim, confirme o treino com um personal ou fisioterapeuta.", href: "/perfil", go: "Abrir Perfil" },
       { q: "O que é a sugestão de carga?", a: "O app olha o que você fez nas últimas vezes. Se você bateu todas as repetições com folga, ele sugere subir a carga. O aviso aparece na tela Hoje e dentro do treino.", },
       { q: "Pra que serve o check-in?", a: "É pra marcar que você foi à academia num dia em que não registrou o treino no app. Ele conta pra sua meta da semana e pra sequência.", href: "/", go: "Ir pra Hoje" },
     ],
@@ -63,7 +64,9 @@ const PERSONAL: Section[] = [
     items: [
       { q: "Como está organizada a página do aluno?", a: "Quatro abas. Resumo: frequência, cargas, peso e o diário alimentar. Treino: a ficha e as orientações de alimentação. Avaliação: avaliação física, anamnese e fotos. Financeiro: mensalidade e cobranças." },
       { q: "Como monto e envio o treino?", a: "Na aba Treino, toque em Montar: no automático pelo perfil do aluno, com a IA (ela lê anamnese e avaliação) ou pela foto de uma ficha de papel. Ajuste e toque em Enviar. Também dá pra baixar o PDF da ficha." },
-      { q: "Como faço a avaliação física?", a: "Em Avaliação → Física → Nova avaliação. Tem Pollock 3 e 7 dobras, perimetria e fotos de postura com grade. O app compara com a avaliação anterior." },
+      { q: "Como faço a avaliação física?", a: "Em Avaliação → Física → Nova avaliação. Ela é dividida em categorias: composição corporal (Pollock 3 ou 7 dobras), perimetria, cardiorrespiratória (esteira escalonada, Bruce, Cooper, Rockport, banco ou caminhada de 6 min, com explicação de cada protocolo), funcional do movimento (FMS, 7 testes de 0 a 3), postural com grade e fotos. Preencha só as que fizer." },
+      { q: "Como vejo a evolução entre avaliações?", a: "Em Avaliação → Física, toque em Relatório de evolução, marque 2 ou mais avaliações e veja os gráficos: composição corporal, gordura, peso, VO2, FMS e perimetria. Dá pra baixar em PDF." },
+      { q: "Onde aparecem a profissão e as dores do aluno?", a: "No topo da página do aluno. Toque ali pra editar. O aluno também informa na anamnese e no perfil dele, e o treino automático e a IA evitam exercícios que forçam essas regiões." },
       { q: "Como tiro as fotos de progresso?", a: "Em Avaliação → Fotos → Tirar fotos de progresso. A câmera abre pra frente, lado e costas. As fotos que o aluno tirar no app também aparecem aqui." },
       { q: "E a anamnese?", a: "Em Avaliação → Anamnese, mande pro aluno responder no app. Se ele não tem o app ou está com você, toque em \"Preencher agora com o aluno\"." },
     ],
@@ -74,6 +77,7 @@ const PERSONAL: Section[] = [
     items: [
       { q: "Como cobro meus alunos?", a: "Na aba Financeiro do aluno, defina mensalidade e dia do vencimento. O Carga cria a cobrança 5 dias antes e avisa o aluno. O Pix cai direto na sua chave, sem passar pelo Carga. Dá pra mandar o Pix no WhatsApp e marcar como paga.", href: "/personal/cobrancas", go: "Abrir Cobranças" },
       { q: "Como marco aulas?", a: "Em Agenda, toque em + e escolha aluno, dia e horário. O aluno recebe aviso no celular.", href: "/personal/agenda", go: "Abrir Agenda" },
+      { q: "Dá pra colocar minha logo e minha cor?", a: "Sim. Em Meu perfil → Sua marca, escolha a cor e envie a logo. Seus alunos passam a ver o app com a sua cor e a sua logo, e os PDFs saem com a sua marca.", href: "/personal/perfil", go: "Abrir meu perfil" },
       { q: "Onde estão desafios e relatórios?", a: "No botão Mais, no menu da área do personal. Desafios fazem um ranking entre seus alunos; Relatórios geram o PDF do mês de cada um com seu nome e CREF." },
     ],
   },

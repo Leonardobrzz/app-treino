@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { BrandTheme } from "@/components/BrandTheme";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
-const THEME_SCRIPT = `try{var t=localStorage.getItem("tema");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+const THEME_SCRIPT = `try{var t=localStorage.getItem("tema");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;var c=localStorage.getItem("marca_css");if(c){var s=document.createElement("style");s.id="brand-css";s.textContent=c;document.head.appendChild(s)}}catch(e){}`;
 // Guarda o pedido de instalação do navegador (Android/Chrome) para o botão "Instalar" do guia.
 const INSTALL_SCRIPT = `window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__carga_bip=e;window.dispatchEvent(new Event("carga:bip"))});window.addEventListener("appinstalled",function(){window.__carga_bip=null;window.dispatchEvent(new Event("carga:installed"))});`;
 
@@ -33,7 +34,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: INSTALL_SCRIPT }} />
       </head>
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <BrandTheme />
+        {children}
+      </body>
     </html>
   );
 }

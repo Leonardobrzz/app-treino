@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Card, Icon, SectionTitle, Spinner } from "@/components/ui";
 import { Field2, PHeader, PersonalNav, inputCls, useTrainer } from "@/components/personal/common";
 import { supabase } from "@/lib/supabase/client";
+import { BRAND_COLORS, applyBrand, logoUrl, onColor, prepareLogo } from "@/lib/brand";
 import { vibrate } from "@/lib/util";
 
 export default function TrainerProfile() {
@@ -14,11 +15,17 @@ export default function TrainerProfile() {
   const [pub, setPub] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState("");
+  const [color, setColor] = useState<string | null>(null);
+  const [logo, setLogo] = useState<string | null>(null);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const logoInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!me) return;
     setF({ cref: me.cref ?? "", trainer_city: me.trainer_city ?? "", whatsapp: me.whatsapp ?? "", trainer_bio: me.trainer_bio ?? "", pix_key: me.pix_key ?? "", pix_name: me.pix_name ?? me.name ?? "" });
     setPub(!!me.showcase_public);
+    setColor(me.brand_color ?? null);
+    setLogo(me.brand_logo ?? null);
   }, [me]);
 
   if (!me) return <Spinner />;
@@ -29,11 +36,28 @@ export default function TrainerProfile() {
   async function save() {
     await supabase()
       .from("profiles")
-      .update({ cref: f.cref.trim() || null, trainer_city: f.trainer_city.trim() || null, whatsapp: f.whatsapp.replace(/\D/g, "") || null, trainer_bio: f.trainer_bio.trim() || null, pix_key: f.pix_key.trim() || null, pix_name: f.pix_name.trim() || null, showcase_public: pub })
+      .update({ cref: f.cref.trim() || null, trainer_city: f.trainer_city.trim() || null, whatsapp: f.whatsapp.replace(/\D/g, "") || null, trainer_bio: f.trainer_bio.trim() || null, pix_key: f.pix_key.trim() || null, pix_name: f.pix_name.trim() || null, showcase_public: pub, brand_color: color, brand_logo: logo })
       .eq("id", me!.id);
+    applyBrand(color || logo ? { name: me!.name ?? "Personal", color, logo: logoUrl(logo), mine: true } : null);
+    window.dispatchEvent(new Event("marca"));
     vibrate(10);
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
+  }
+  async function pickLogo(file?: File) {
+    if (!file) return;
+    setLogoBusy(true);
+    try {
+      const blob = await prepareLogo(file);
+      const path = `${me!.id}/logo-${Date.now().toString(36)}.png`;
+      const { error } = await supabase().storage.from("vitrine").upload(path, blob, { contentType: "image/png" });
+      if (!error) {
+        if (logo) await supabase().storage.from("vitrine").remove([logo]);
+        setLogo(path);
+      }
+    } finally {
+      setLogoBusy(false);
+    }
   }
   async function copy(t: string, k: string) {
     await navigator.clipboard?.writeText(t).catch(() => {});
@@ -91,6 +115,48 @@ export default function TrainerProfile() {
           <textarea value={f.trainer_bio} onChange={(e) => setF({ ...f, trainer_bio: e.target.value.slice(0, 400) })} rows={3} className="w-full resize-none rounded-xl bg-card px-3.5 py-2.5 text-[16px] outline-none ring-accent focus:ring-2" />
         </Field2>
       </div>
+
+      <SectionTitle>Sua marca</SectionTitle>
+      <p className="mx-5 -mt-1 mb-3 text-[13px] leading-snug text-label-2">Sua cor e sua logo no app dos seus alunos (e no seu), nos PDFs de treino, dieta e avaliação.</p>
+      <Card className="mx-5 flex flex-col gap-4 p-4">
+        <div className="flex flex-col gap-2">
+          <span className="text-[13px] font-semibold text-label-2">Cor</span>
+          <div className="flex flex-wrap gap-2.5">
+            <button onClick={() => setColor(null)} aria-pressed={!color} aria-label="Cor padrão do Carga" className={`press flex h-9 items-center rounded-full px-3 text-[13px] font-semibold ${!color ? "bg-label text-bg" : "bg-card-2"}`}>
+              Padrão
+            </button>
+            {BRAND_COLORS.map((c) => (
+              <button key={c} onClick={() => setColor(c)} aria-pressed={color === c} aria-label={`Cor ${c}`} className="press h-9 w-9 rounded-full ring-offset-2 ring-offset-[var(--card)]" style={{ background: c, boxShadow: color === c ? `0 0 0 3px var(--card), 0 0 0 5px ${c}` : undefined }} />
+            ))}
+            <label className="press relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-card-2 text-label-2" aria-label="Escolher outra cor">
+              <Icon name="plus" size={16} />
+              <input type="color" value={color ?? "#ff9500"} onChange={(e) => setColor(e.target.value)} className="absolute inset-0 opacity-0" />
+            </label>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <input ref={logoInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" data-testid="logo-input" onChange={(e) => pickLogo(e.target.files?.[0])} />
+          <button onClick={() => logoInput.current?.click()} className="press flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-card-2 text-label-2" aria-label="Enviar logo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {logo ? <img src={logoUrl(logo)!} alt="Sua logo" className="h-full w-full object-contain p-1" /> : <Icon name="image" size={24} />}
+          </button>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-[15px] font-semibold">{logoBusy ? "Enviando…" : logo ? "Sua logo" : "Enviar sua logo"}</span>
+            <span className="text-[13px] leading-snug text-label-2">PNG com fundo transparente fica melhor.</span>
+          </div>
+          {logo && (
+            <button onClick={() => setLogo(null)} className="press h-9 px-2 text-[14px] font-semibold text-bad">
+              Tirar
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-3 rounded-2xl p-3" style={{ background: color ? `color-mix(in srgb, ${color} 14%, transparent)` : "var(--accent-soft)" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {logo ? <img src={logoUrl(logo)!} alt="" className="h-9 w-9 rounded-lg object-contain" /> : <span className="h-9 w-9 rounded-lg" style={{ background: color ?? "var(--accent)" }} />}
+          <span className="flex-1 text-[14px] font-semibold">Prévia no app do aluno</span>
+          <span className="rounded-full px-3 py-1.5 text-[13px] font-bold" style={{ background: color ?? "var(--accent)", color: color ? onColor(color) : "var(--on-accent)" }}>Iniciar treino</span>
+        </div>
+      </Card>
 
       <SectionTitle>Vitrine</SectionTitle>
       <label className="mx-5 flex items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3.5">

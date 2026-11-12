@@ -11,7 +11,7 @@ import { LineChart } from "@/components/LineChart";
 import { Icon, type IconName } from "@/components/ui";
 import { WheelPicker } from "@/components/WheelPicker";
 import { getProfile } from "@/lib/data";
-import { PRIORITY_OPTIONS, generatePlan, type GenPlan, type Goal, type Level, type Location } from "@/lib/plan-generator";
+import { PAIN_OPTIONS, PRIORITY_OPTIONS, generatePlan, painLabel, type GenPlan, type Goal, type Level, type Location } from "@/lib/plan-generator";
 import { supabase } from "@/lib/supabase/client";
 import type { MeasureKey } from "@/lib/types";
 import { WEEKDAYS, WEEKDAYS_SHORT, num, todayISO, vibrate } from "@/lib/util";
@@ -27,6 +27,7 @@ type Answers = {
   target?: number;
   pace?: "lento" | "moderado" | "rapido";
   level?: Level;
+  pains?: string[];
   priorities?: string[];
   days?: number[];
   location?: Location;
@@ -80,6 +81,7 @@ const STEPS: Step[] = [
   { id: "target", when: goalWeightRelevant, q: () => "Qual peso você quer alcançar?", answer: (a) => (direction(a) ? `${num(a.target!)} kg` : "Manter o peso atual") },
   { id: "pace", when: (a) => goalWeightRelevant(a) && !!direction(a), q: (a) => `Em que ritmo você quer ${direction(a) === "perder" ? "perder" : "ganhar"} peso?`, answer: (a) => `${PACE_LABEL[a.pace!]} · ${num(RATES[direction(a)!][a.pace!], 2)} kg/sem` },
   { id: "level", q: () => "Qual é o seu nível de treino?", answer: (a) => LEVELS.find((l) => l.value === a.level)!.label },
+  { id: "pains", q: () => "Sente alguma dor ou tem alguma lesão? Assim eu tiro do treino o que pode piorar.", answer: (a) => (a.pains!.length ? a.pains!.map(painLabel).join(", ") : "Nenhuma") },
   { id: "priorities", q: () => "Quer dar atenção extra a algum músculo? Escolha até 3.", answer: (a) => (a.priorities!.length ? a.priorities!.join(" + ") : "Sem preferência") },
   { id: "days", q: () => "Quais dias você quer treinar?", answer: (a) => [1, 2, 3, 4, 5, 6, 0].filter((d) => a.days!.includes(d)).map((d) => WEEKDAYS[d]).join(", ") },
   { id: "location", q: () => "Onde você vai treinar?", answer: (a) => LOCATIONS.find((l) => l.value === a.location)!.label },
@@ -128,7 +130,7 @@ export default function Onboarding() {
     setPhase("building");
     (async () => {
       const catalog = await loadExercises();
-      const p = generatePlan({ goal: a.goal!, level: a.level!, location: a.location!, days: a.days!, minutes: a.minutes!, priorities: a.priorities ?? [] }, catalog);
+      const p = generatePlan({ goal: a.goal!, level: a.level!, location: a.location!, days: a.days!, minutes: a.minutes!, priorities: a.priorities ?? [], pains: a.pains ?? [] }, catalog);
       await new Promise((r) => setTimeout(r, 2600));
       setPlan(p);
       setPhase("plan");
@@ -156,6 +158,7 @@ export default function Onboarding() {
         pace: direction(a) ? a.pace : null,
         level: a.level,
         priority_muscles: a.priorities ?? [],
+        pains: a.pains ?? [],
         training_days: a.days ?? [],
         location: a.location,
         session_minutes: a.minutes,
@@ -168,7 +171,7 @@ export default function Onboarding() {
       const { data: p } = await sb.from("plans").insert({ name: plan.name }).select("id").single();
       for (const d of plan.days) {
         const { data: day } = await sb.from("plan_days").insert({ plan_id: p!.id, weekday: d.weekday, title: d.title }).select("id").single();
-        if (day) await sb.from("plan_exercises").insert(d.exercises.map((e, i) => ({ plan_day_id: day.id, exercise_id: e.exercise.id, position: i, sets: e.sets, reps: e.reps, rest_seconds: Math.max(15, e.rest) })));
+        if (day) await sb.from("plan_exercises").insert(d.exercises.map((e, i) => ({ plan_day_id: day.id, exercise_id: e.exercise.id, position: i, sets: e.sets, reps: e.reps, rest_seconds: Math.max(15, e.rest), notes: e.note ?? null })));
       }
     }
     const target = usePlan ? "/treinos" : "/";
@@ -257,6 +260,7 @@ function Input({ step, a, onAnswer }: { step: StepId; a: Answers; onAnswer: (p: 
   const [weight, setWeight] = useState(a.weight ?? (a.sex === "feminino" ? 62 : 75));
   const [target, setTarget] = useState(a.target ?? (a.weight ? Math.round((a.goal === "perder" ? a.weight - 5 : a.goal === "ganhar" ? a.weight + 4 : a.weight) * 2) / 2 : 70));
   const [multi, setMulti] = useState<string[]>(a.priorities ?? []);
+  const [pains, setPains] = useState<string[]>(a.pains ?? []);
   const [days, setDays] = useState<number[]>(a.days ?? []);
   const [error, setError] = useState("");
 
@@ -367,6 +371,36 @@ function Input({ step, a, onAnswer }: { step: StepId; a: Answers; onAnswer: (p: 
   }
 
   if (step === "level") return <div className="flex flex-col gap-2.5">{LEVELS.map((l) => <Option key={l.value} icon={l.icon} label={l.label} desc={l.desc} onClick={() => onAnswer({ level: l.value }, "level")} />)}</div>;
+
+  if (step === "pains")
+    return (
+      <div className="flex flex-col gap-2.5">
+        <div className="grid grid-cols-2 gap-2">
+          {PAIN_OPTIONS.map((p) => {
+            const on = pains.includes(p.id);
+            return (
+              <motion.button
+                key={p.id}
+                whileTap={{ scale: 0.95 }}
+                aria-pressed={on}
+                onClick={() => {
+                  vibrate(6);
+                  setPains((x) => (on ? x.filter((y) => y !== p.id) : [...x, p.id]));
+                }}
+                className={`flex flex-col items-start rounded-2xl px-3.5 py-2.5 text-left transition-colors ${on ? "bg-accent text-on-accent" : "bg-card"}`}
+              >
+                <span className="text-[15px] font-semibold">{p.label}</span>
+                <span className={`text-[12px] leading-snug ${on ? "opacity-80" : "text-label-2"}`}>{p.hint}</span>
+              </motion.button>
+            );
+          })}
+        </div>
+        <Continue disabled={!pains.length} onClick={() => onAnswer({ pains }, "pains")} />
+        <button onClick={() => onAnswer({ pains: [] }, "pains")} className="press h-11 text-[16px] font-medium text-label-2">
+          Não tenho dor nem lesão
+        </button>
+      </div>
+    );
 
   if (step === "priorities") {
     const intensity: Partial<Record<MeasureKey, number>> = {};
@@ -558,6 +592,14 @@ function PlanPreview({ plan, a, saving, onUse, onSkip }: { plan: GenPlan; a: Ans
           </motion.div>
         ))}
       </div>
+      {!!a.pains?.length && (
+        <div className="flex gap-3 rounded-2xl border border-accent/30 bg-accent-soft/60 p-3.5">
+          <Icon name="heart" size={20} className="mt-0.5 shrink-0 text-accent-ink" />
+          <p className="text-[14px] leading-snug">
+            Por causa de <b>{a.pains.map(painLabel).join(", ").toLowerCase()}</b>, deixei de fora {plan.removed.length ? <>exercícios como <b>{plan.removed.slice(0, 3).join(", ").toLowerCase()}</b></> : "os exercícios que mais forçam essa região"} e coloquei cuidados nos que ficaram. Mesmo assim, com dor ou lesão, vale confirmar o treino com um personal ou fisioterapeuta.
+          </p>
+        </div>
+      )}
       <p className="text-[14px] font-semibold text-label-2">{plan.name}</p>
       <div className="relative flex flex-col gap-3 pl-6">
         <div className="absolute bottom-4 left-[7px] top-4 w-0.5 rounded-full bg-fill" />

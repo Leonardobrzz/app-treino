@@ -12,6 +12,8 @@ export function AssessmentsTab({ d }: { d: StudentDetail }) {
   const [list, setList] = useState<Assessment[] | null>(null);
   const [idx, setIdx] = useState(0);
   const [del, setDel] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [sel, setSel] = useState<string[]>([]);
 
   async function load() {
     const { data } = await supabase().from("assessments").select("*").eq("student_id", d.profile.id).eq("trainer_id", d.link.trainer_id).order("assessed_on", { ascending: false }).order("created_at", { ascending: false });
@@ -47,6 +49,18 @@ export function AssessmentsTab({ d }: { d: StudentDetail }) {
         <p className="mx-5 mt-4 rounded-2xl bg-card p-4 text-[15px] leading-snug text-label-2">Nenhuma avaliação ainda. Faça a primeira com dobras cutâneas, perimetria e fotos de postura.</p>
       ) : (
         <>
+          {list.length > 1 && (
+            <button onClick={() => (setSel(list.slice(0, 2).map((x) => x.id)), setPicking(true))} className="press mx-5 mt-3 flex w-[calc(100%-40px)] items-center gap-3 rounded-2xl bg-card p-3.5 text-left">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
+                <Icon name="chart" size={20} />
+              </span>
+              <span className="flex flex-1 flex-col">
+                <span className="text-[15px] font-semibold">Relatório de evolução</span>
+                <span className="text-[13px] text-label-2">Escolha 2 ou mais avaliações e veja os gráficos</span>
+              </span>
+              <Icon name="chevron" size={17} className="text-label-3" />
+            </button>
+          )}
           {list.length > 1 && (
             <div className="no-scrollbar mx-5 mt-4 flex gap-2 overflow-x-auto">
               {list.map((x, i) => (
@@ -84,6 +98,27 @@ export function AssessmentsTab({ d }: { d: StudentDetail }) {
           )}
         </>
       )}
+      <Sheet open={picking} onClose={() => setPicking(false)} title="Comparar avaliações">
+        <div className="flex flex-col gap-3 pt-1">
+          <div className="flex flex-col overflow-hidden rounded-2xl bg-card">
+            {list.map((x) => {
+              const on = sel.includes(x.id);
+              return (
+                <button key={x.id} onClick={() => setSel((s) => (on ? s.filter((y) => y !== x.id) : [...s, x.id]))} aria-pressed={on} className="press flex items-center gap-3 border-b border-sep px-4 py-3 text-left last:border-b-0">
+                  <span className={`flex h-6 w-6 items-center justify-center rounded-md border-2 ${on ? "border-accent bg-accent text-on-accent" : "border-fill"}`}>{on && <Icon name="check" size={14} stroke={3} />}</span>
+                  <span className="flex flex-1 flex-col">
+                    <span className="text-[15px] font-semibold">{fmtDate(x.assessed_on, { year: true })}</span>
+                    <span className="text-[13px] text-label-2">{[x.body_fat != null ? `${num(Number(x.body_fat))}% gordura` : null, x.weight ? `${num(Number(x.weight))} kg` : null, x.cardio?.vo2 ? `VO2 ${num(Number(x.cardio.vo2))}` : null, x.functional?.total != null ? `FMS ${x.functional.total}` : null].filter(Boolean).join(" · ") || "medidas"}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <Link href={`/personal/aluno/${d.profile.id}/evolucao?ids=${sel.join(",")}`} aria-disabled={sel.length < 2} className={`press flex h-12 items-center justify-center gap-2 rounded-2xl bg-accent text-[16px] font-semibold text-on-accent ${sel.length < 2 ? "pointer-events-none opacity-50" : ""}`}>
+            <Icon name="chart" size={18} /> Ver evolução ({sel.length})
+          </Link>
+        </div>
+      </Sheet>
       <Sheet open={del} onClose={() => setDel(false)} title="Apagar avaliação?">
         <div className="flex flex-col gap-3 pt-1">
           <p className="text-[15px] text-label-2">As medidas e as fotos de postura dessa data somem pra você e pro aluno.</p>

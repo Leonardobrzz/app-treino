@@ -1,4 +1,5 @@
 import { chatModel } from "@/lib/ai-models";
+import { painLabel } from "@/lib/plan-generator";
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -223,7 +224,7 @@ export async function POST(req: NextRequest) {
   if (!text) return NextResponse.json({ error: "mensagem vazia" }, { status: 400 });
 
   const [profile, plan, hist, catalogRes, weight, mealsToday] = await Promise.all([
-    sb.from("profiles").select("name,goal,weekly_goal,level,location,priority_muscles,session_minutes,height_cm,sex,birth_date,kcal_target,protein_target,carbs_target,fat_target,water_target_ml").eq("id", u.user.id).maybeSingle(),
+    sb.from("profiles").select("name,goal,weekly_goal,level,location,priority_muscles,pains,profession,session_minutes,height_cm,sex,birth_date,kcal_target,protein_target,carbs_target,fat_target,water_target_ml").eq("id", u.user.id).maybeSingle(),
     activePlan(sb),
     sb.from("ai_messages").select("role,content").eq("hidden", false).order("created_at", { ascending: false }).limit(16),
     sb.from("exercises").select("id,name,muscle_group,equipment,created_by").order("name"),
@@ -266,7 +267,7 @@ ${[...byGroup.entries()].map(([g, l]) => `${g}: ${l.join(" | ")}`).join("\n")}`;
 
   const userPrompt = `Hoje é ${new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "America/Sao_Paulo" })}.
 
-Usuário: ${profile.data?.name ?? "sem nome"} · objetivo: ${profile.data?.goal ?? "não informado"} · meta: ${profile.data?.weekly_goal ?? 4} treinos/semana · nível: ${profile.data?.level ?? "?"} · treina em: ${profile.data?.location ?? "?"} · tempo por treino: ${profile.data?.session_minutes ?? "?"} min · músculos prioritários: ${(profile.data?.priority_muscles ?? []).join(", ") || "nenhum"}${profile.data?.height_cm ? ` · altura: ${profile.data.height_cm} cm` : ""}.
+Usuário: ${profile.data?.name ?? "sem nome"} · objetivo: ${profile.data?.goal ?? "não informado"} · meta: ${profile.data?.weekly_goal ?? 4} treinos/semana · nível: ${profile.data?.level ?? "?"} · treina em: ${profile.data?.location ?? "?"} · tempo por treino: ${profile.data?.session_minutes ?? "?"} min · músculos prioritários: ${(profile.data?.priority_muscles ?? []).join(", ") || "nenhum"}${(profile.data as { pains?: string[] } | null)?.pains?.length ? ` · DORES/LESÕES: ${(profile.data as { pains: string[] }).pains.map(painLabel).join(", ")} (evite exercícios que forcem essas regiões e prefira alternativas seguras)` : ""}${profile.data?.height_cm ? ` · altura: ${profile.data.height_cm} cm` : ""}.
 Peso recente: ${(weight.data ?? []).map((w) => `${w.weight} kg em ${w.measured_on}`).join(", ") || "não registrado"}.
 ${own.length ? `Exercícios criados pelo usuário: ${own.map((e) => `${e.name} (${e.muscle_group})`).join(" | ")}.\n` : ""}
 Nutrição:

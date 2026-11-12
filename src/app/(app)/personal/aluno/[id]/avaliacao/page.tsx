@@ -3,7 +3,9 @@
 import { useParams, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Card, Header, Icon, SectionTitle, Segmented, Spinner } from "@/components/ui";
+import { Button, Card, Header, Icon, SectionTitle, Segmented, Spinner, type IconName } from "@/components/ui";
+import { CardioForm, FmsForm } from "@/components/personal/AssessTests";
+import { CARDIO_PROTOCOLS, computeCardio, computeFms, type CardioData, type FunctionalData } from "@/lib/assess-tests";
 import { PostureFrame } from "@/components/personal/AssessmentView";
 import { useTrainer } from "@/components/personal/common";
 import { CIRC_LABEL, CIRCS, POSTURE_FINDINGS, SKINFOLD_LABEL, ageFrom, bodyFat, fatClass, sitesFor, studentDetail, uploadTo, type Assessment, type Circ, type Skinfold, type StudentDetail } from "@/lib/personal";
@@ -13,6 +15,15 @@ import { supabase } from "@/lib/supabase/client";
 import { num, todayISO, vibrate } from "@/lib/util";
 
 type Pose = "frente" | "lado" | "costas";
+type CatId = "composicao" | "perimetria" | "cardio" | "funcional" | "postural" | "fotos";
+const CATS: { id: CatId; label: string; icon: IconName }[] = [
+  { id: "composicao", label: "Composição corporal", icon: "body" },
+  { id: "perimetria", label: "Perimetria", icon: "ruler" },
+  { id: "cardio", label: "Cardio\u00adrespiratória", icon: "heart" },
+  { id: "funcional", label: "Funcional do movimento", icon: "dumbbell" },
+  { id: "postural", label: "Postural", icon: "camera" },
+  { id: "fotos", label: "Fotos comparativas", icon: "image" },
+];
 const POSES: Pose[] = ["frente", "lado", "costas"];
 const parse = (s: string) => (s.trim() === "" ? undefined : Number(s.replace(",", ".")));
 
@@ -32,6 +43,9 @@ export default function NewAssessment() {
   const [photos, setPhotos] = useState<Partial<Record<Pose, { blob: Blob; url: string }>>>({});
   const [findings, setFindings] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
+  const [cat, setCat] = useState<CatId | null>("composicao");
+  const [cardio, setCardio] = useState<CardioData>({ protocol: "escalonado", inputs: {}, stages: CARDIO_PROTOCOLS[0].defaultStages!.map((x) => ({ ...x })) });
+  const [fms, setFms] = useState<FunctionalData>({ protocol: "fms", scores: {} });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const inputs = useRef<Partial<Record<Pose, HTMLInputElement | null>>>({});
@@ -57,6 +71,20 @@ export default function NewAssessment() {
   const fatMass = bf && w ? Math.round(w * bf.pct) / 100 : null;
   const lean = fatMass != null && w ? Math.round((w - fatMass) * 10) / 10 : null;
   const cls = bf ? fatClass(bf.pct, sex) : null;
+  const ctx = { sex, age: Number(age) || null, weight: w ?? null, height: parse(height) ?? null };
+  const cardioRes = computeCardio(cardio, ctx);
+  const fmsRes = computeFms(fms);
+  const cardioUsed = cardioRes.vo2 != null || cardioRes.pctPredicted != null;
+  const fmsUsed = Object.keys(fms.scores).length > 0;
+  const circN = Object.values(circ).filter((v) => v && v.trim()).length;
+  const status: Record<CatId, string> = {
+    composicao: bf ? `${num(bf.pct)}% de gordura` : "",
+    perimetria: circN ? `${circN} ${circN === 1 ? "medida" : "medidas"}` : "",
+    cardio: cardioRes.vo2 != null ? `VO2 ${num(cardioRes.vo2)}` : cardioRes.pctPredicted != null ? `${cardioRes.pctPredicted}% do previsto` : "",
+    funcional: fmsRes.total != null ? `${fmsRes.total}/21` : fmsUsed ? "Em andamento" : "",
+    postural: Object.keys(photos).length || findings.length ? `${Object.keys(photos).length} fotos · ${findings.length} desvios` : "",
+    fotos: "",
+  };
 
   async function pick(p: Pose, f?: File) {
     if (!f) return;
@@ -82,13 +110,15 @@ export default function NewAssessment() {
           age: Number(age) || null,
           weight: w ?? null,
           height: parse(height) ?? null,
-          protocol: sites.length ? protocol : "nenhum",
+          protocol: sites.length && Object.keys(sf).length ? protocol : "nenhum",
           skinfolds: sf,
           circumferences: c,
           body_fat: bf?.pct ?? null,
           fat_mass: fatMass,
           lean_mass: lean,
           posture: { photos: paths, findings },
+          cardio: cardioUsed ? cardioRes : null,
+          functional: fmsUsed ? fmsRes : null,
           notes: notes.trim() || null,
         });
       if (e) throw e;
@@ -132,14 +162,37 @@ export default function NewAssessment() {
         <Segmented<"masculino" | "feminino"> value={(sex ?? "masculino") as "masculino" | "feminino"} onChange={setSex} options={[{ value: "masculino", label: "Masculino" }, { value: "feminino", label: "Feminino" }]} />
       </div>
 
-      <SectionTitle>Dobras cutâneas</SectionTitle>
-      <div className="mx-5">
+      <SectionTitle>Categorias</SectionTitle>
+      <div className="mx-5 grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+        {CATS.map((c) => {
+          const st = status[c.id];
+          const on = cat === c.id;
+          return (
+            <motion.button key={c.id} whileTap={{ scale: 0.97 }} onClick={() => setCat(on ? null : c.id)} aria-expanded={on} className={`press flex items-center gap-2.5 rounded-2xl p-3 text-left ${on ? "bg-accent text-on-accent" : "bg-card"}`}>
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${on ? "bg-white/25" : "bg-accent-soft text-accent-ink"}`}>
+                <Icon name={c.icon} size={19} />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-[14px] font-semibold leading-tight">{c.label}</span>
+                <span className={`truncate text-[12px] ${on ? "opacity-85" : st ? "font-semibold text-good" : "text-label-2"}`}>{st || "Opcional"}</span>
+              </span>
+            </motion.button>
+          );
+        })}
+      </div>
+      <AnimatePresence mode="wait">
+        {cat && (
+          <motion.section key={cat} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }} className="mx-5 mt-4 flex flex-col gap-3">
+            <h2 className="text-[20px] font-bold">{CATS.find((c) => c.id === cat)!.label}</h2>
+            {cat === "composicao" && (
+              <>
+      <div>
         <Segmented<Assessment["protocol"]> value={protocol} onChange={setProtocol} options={[{ value: "nenhum", label: "Sem dobras" }, { value: "pollock3", label: "Pollock 3" }, { value: "pollock7", label: "Pollock 7" }]} />
       </div>
       <AnimatePresence initial={false}>
         {sites.length > 0 && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <div className="mx-5 mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-2 gap-3">
               {sites.map((k) => (
                 <label key={k} className="flex flex-col gap-1 text-[13px] font-semibold text-label-2">
                   {SKINFOLD_LABEL[k]} (mm)
@@ -147,7 +200,7 @@ export default function NewAssessment() {
                 </label>
               ))}
             </div>
-            <motion.div layout className="mx-5 mt-3">
+            <motion.div layout className="mt-3">
               <Card className={`flex items-center gap-3 p-4 ${bf ? "" : "opacity-60"}`}>
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-accent-ink">
                   <Icon name="body" size={22} />
@@ -169,8 +222,11 @@ export default function NewAssessment() {
         )}
       </AnimatePresence>
 
-      <SectionTitle>Perimetria (cm)</SectionTitle>
-      <div className="mx-5 grid grid-cols-3 gap-2.5 lg:grid-cols-6">
+              </>
+            )}
+            {cat === "perimetria" && (
+              <>
+      <div className="grid grid-cols-3 gap-2.5 lg:grid-cols-6">
         {CIRCS.map((k) => (
           <label key={k} className="flex flex-col gap-1 text-[12px] font-semibold text-label-2">
             <span className="truncate">{CIRC_LABEL[k]}</span>
@@ -179,9 +235,14 @@ export default function NewAssessment() {
         ))}
       </div>
 
-      <SectionTitle>Postura</SectionTitle>
-      <p className="mx-5 -mt-1 mb-2 text-[13px] leading-snug text-label-2">Fotos de corpo inteiro, de frente, de lado e de costas. A grade e a linha de prumo ajudam a ver os desvios.</p>
-      <div className="mx-5 grid grid-cols-3 gap-2">
+              </>
+            )}
+            {cat === "cardio" && <CardioForm value={cardio} onChange={setCardio} sex={sex} age={Number(age) || null} result={cardioRes} />}
+            {cat === "funcional" && <FmsForm value={fms} onChange={setFms} result={fmsRes} />}
+            {cat === "postural" && (
+              <>
+      <p className="mb-2 text-[13px] leading-snug text-label-2">Fotos de corpo inteiro, de frente, de lado e de costas. A grade e a linha de prumo ajudam a ver os desvios.</p>
+      <div className="grid grid-cols-3 gap-2">
         {POSES.map((p) => (
           <div key={p} className="flex flex-col gap-1">
             <input ref={(el) => { inputs.current[p] = el; }} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => pick(p, e.target.files?.[0])} data-testid={`postura-${p}`} />
@@ -198,7 +259,7 @@ export default function NewAssessment() {
           </div>
         ))}
       </div>
-      <div className="mx-5 mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         {POSTURE_FINDINGS.map((f) => {
           const on = findings.includes(f);
           return (
@@ -208,6 +269,17 @@ export default function NewAssessment() {
           );
         })}
       </div>
+
+              </>
+            )}
+            {cat === "fotos" && (
+              <Card className="flex flex-col gap-2 p-4">
+                <p className="text-[14px] leading-snug text-label-2">As fotos comparativas ficam na aba Fotos do aluno: frente, lado e costas por data, com o antes e depois lado a lado. Salve esta avaliação e depois tire as fotos por lá.</p>
+              </Card>
+            )}
+          </motion.section>
+        )}
+      </AnimatePresence>
 
       <SectionTitle>Observações</SectionTitle>
       <div className="mx-5">

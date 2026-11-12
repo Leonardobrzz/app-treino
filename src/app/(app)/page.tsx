@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Card, Empty, Icon, LinkButton, SectionTitle, Spinner } from "@/components/ui";
 import { CountUp, Stagger, StaggerItem } from "@/components/motion";
 import { Checklist } from "@/components/guide";
+import { useBrand } from "@/components/BrandTheme";
 import { myTrainers } from "@/lib/personal";
 import { refreshPush } from "@/lib/push";
 import { checkInToday, getActivePlan, getProfile, lastSetsByExercise, type ActivePlan } from "@/lib/data";
@@ -18,6 +19,7 @@ import { WEEKDAYS, WEEKDAYS_LETTER, longToday, num, suggest, todayISO, vibrate, 
 
 export default function TodayPage() {
   const router = useRouter();
+  const brand = useBrand();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [unread, setUnread] = useState(0);
@@ -141,7 +143,15 @@ export default function TodayPage() {
     <>
       <header className="safe-top flex items-end justify-between px-5 pb-2">
         <div className="flex flex-col gap-0.5">
-          <span className="text-[13px] font-semibold tracking-wide text-label-2">{dateLabel || "\u00a0"}</span>
+          {brand && !brand.mine ? (
+            <span className="flex items-center gap-1.5 text-[13px] font-semibold tracking-wide text-label-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {brand.logo && <img src={brand.logo} alt="" className="h-5 w-auto max-w-[60px] object-contain" />}
+              {brand.name} · {dateLabel || "\u00a0"}
+            </span>
+          ) : (
+            <span className="text-[13px] font-semibold tracking-wide text-label-2">{dateLabel || "\u00a0"}</span>
+          )}
           <h1 className="text-[34px] font-bold leading-tight tracking-[-0.5px]">{profile?.name ? `Olá, ${profile.name.split(" ")[0]}` : "Hoje"}</h1>
         </div>
         <div className="flex items-center gap-2">

@@ -10,6 +10,10 @@ export type Subscription = {
 export const PRO_STATUSES = ["trialing", "active", "past_due"];
 export const isPro = (s?: Pick<Subscription, "status"> | null) => !!s && PRO_STATUSES.includes(s.status);
 
+/** No plano grátis, o histórico (treinos, evolução e peso) mostra só os últimos dias */
+export const FREE_HISTORY_DAYS = 14;
+export const freeCutoff = () => Date.now() - FREE_HISTORY_DAYS * 864e5;
+
 /** Mensagens com a IA por mês no plano grátis */
 export const FREE_AI_MESSAGES = 5;
 

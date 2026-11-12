@@ -17,7 +17,7 @@ export function TabBar() {
   const path = usePathname();
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href) || (href === "/feed" && path.startsWith("/amigos")) || (href === "/evolucao" && ["/medidas", "/fotos", "/relatorio"].some((x) => path.startsWith(x))) || (href === "/treinos" && (path.startsWith("/exercicios") || path.startsWith("/importar"))));
   return (
-    <nav aria-label="Navegação principal" className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-sep bg-[var(--tabbar)] backdrop-blur-xl">
+    <nav aria-label="Navegação principal" className={`safe-bottom fixed inset-x-0 bottom-0 z-40 ${path.startsWith("/personal") && path !== "/personal/comecar" ? "lg:hidden" : ""} border-t border-sep bg-[var(--tabbar)] backdrop-blur-xl`}>
       <div className="mx-auto grid max-w-[520px] grid-cols-5 px-2 pt-1.5">
         {TABS.map((t) => {
           const on = active(t.href);

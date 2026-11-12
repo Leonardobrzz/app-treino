@@ -7,7 +7,7 @@ import { LineChart } from "@/components/LineChart";
 import { ProBadge } from "@/components/ProLock";
 import Link from "next/link";
 import { getSubscription } from "@/lib/data";
-import { isPro } from "@/lib/pro";
+import { FREE_HISTORY_DAYS, freeCutoff, isPro } from "@/lib/pro";
 import { Button, Card, Empty, Header, Icon, SectionTitle, Segmented, Sheet, Spinner, Stat } from "@/components/ui";
 import { supabase } from "@/lib/supabase/client";
 import { MEASURES, MEASURE_LABEL, type BodyMeasurement, type BodyWeight, type MeasureKey } from "@/lib/types";
@@ -165,7 +165,7 @@ export default function MeasuresPage() {
             </motion.div>
           ) : (
             <motion.div key="p" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.2 }}>
-              <WeightTab weights={weights} onAdd={() => setSheet("peso")} reload={load} />
+              <WeightTab weights={pro ? weights : weights.filter((w) => new Date(w.measured_on + "T12:00:00").getTime() >= freeCutoff())} hidden={pro ? 0 : weights.filter((w) => new Date(w.measured_on + "T12:00:00").getTime() < freeCutoff()).length} onAdd={() => setSheet("peso")} reload={load} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -177,7 +177,19 @@ export default function MeasuresPage() {
   );
 }
 
-function WeightTab({ weights, onAdd, reload }: { weights: BodyWeight[]; onAdd: () => void; reload: () => void }) {
+function WeightTab({ weights, hidden = 0, onAdd, reload }: { weights: BodyWeight[]; hidden?: number; onAdd: () => void; reload: () => void }) {
+  const more = hidden > 0 && (
+    <Link href="/pro" className="press mx-5 mt-3 flex items-center justify-center gap-2 rounded-xl bg-card py-3 text-[14px] font-semibold text-accent-ink">
+      <Icon name="lock" size={15} /> {hidden} {hidden === 1 ? "registro mais antigo" : "registros mais antigos"} no Pro
+    </Link>
+  );
+  if (!weights.length && hidden)
+    return (
+      <div className="pt-5">
+        <Empty icon="scale" title="Registre seu peso de hoje" text={`No grátis você vê os últimos ${FREE_HISTORY_DAYS} dias.`} action={<Button onClick={onAdd}>Registrar peso</Button>} />
+        {more}
+      </div>
+    );
   if (!weights.length)
     return (
       <div className="pt-5">
@@ -226,6 +238,7 @@ function WeightTab({ weights, onAdd, reload }: { weights: BodyWeight[]; onAdd: (
           );
         })}
       </ul>
+      {more}
     </>
   );
 }

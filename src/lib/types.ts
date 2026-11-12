@@ -93,6 +93,10 @@ export type Profile = {
   pix_key?: string | null;
   pix_name?: string | null;
   showcase_public?: boolean;
+  profession?: string | null;
+  pains?: string[];
+  brand_color?: string | null;
+  brand_logo?: string | null;
 };
 
 export type ProgressPhoto = { id: string; taken_on: string; pose: "frente" | "lado" | "costas"; path: string; created_at: string };

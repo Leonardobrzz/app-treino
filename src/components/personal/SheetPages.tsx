@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { H2, Logo, PAGE_H, PAGE_W } from "@/components/ReportPages";
+import { BrandMark, H2, Logo, PAGE_H, PAGE_W } from "@/components/ReportPages";
 import { methodLabel, METHODS, type PlanDayT } from "@/lib/personal";
 import { WEEKDAYS, fmtDate, num } from "@/lib/util";
 
@@ -29,9 +29,7 @@ function Head({ kind, title, who }: { kind: string; title: string; who: Who }) {
   return (
     <>
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-2.5 text-[20px] font-bold">
-          <Logo size={34} /> Carga
-        </span>
+        <BrandMark size={34} text={20} />
         <span className="rounded-full bg-[#FFF1DE] px-3 py-1 text-[12px] font-bold tracking-wide text-[#C93400]">{kind}</span>
       </div>
       <h1 className="mt-6 text-[32px] font-extrabold leading-tight tracking-[-0.8px]">{title}</h1>

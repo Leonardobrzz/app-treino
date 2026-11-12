@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { ProBadge } from "@/components/ProLock";
 import { Icon, Spinner, type IconName } from "@/components/ui";
 import { getSubscription } from "@/lib/data";
-import { FREE_AI_MESSAGES, PRO_AI_MESSAGES, PRICES, brl, isPro, type Subscription } from "@/lib/pro";
+import { FREE_AI_MESSAGES, FREE_HISTORY_DAYS, PRO_AI_MESSAGES, PRICES, brl, isPro, type Subscription } from "@/lib/pro";
 import { fmtDate, vibrate } from "@/lib/util";
 
 const ROWS: { icon: IconName; label: string; free: string | boolean; pro: string | boolean }[] = [
@@ -23,7 +23,7 @@ const ROWS: { icon: IconName; label: string; free: string | boolean; pro: string
   { icon: "trophy", label: "Gráfico de força (1RM) por exercício", free: false, pro: true },
   { icon: "ruler", label: "Linha do tempo do corpo", free: false, pro: true },
   { icon: "download", label: "Relatório em PDF do período", free: false, pro: true },
-  { icon: "clock", label: "Evolução do ano inteiro", free: false, pro: true },
+  { icon: "clock", label: "Histórico de treinos, evolução e peso", free: `${FREE_HISTORY_DAYS} dias`, pro: "Completo" },
 ];
 
 export default function ProPage() {

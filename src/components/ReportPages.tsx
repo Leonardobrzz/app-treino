@@ -1,5 +1,6 @@
 "use client";
 
+import { cachedBrand } from "@/lib/brand";
 import type { ReactNode } from "react";
 import { Body, DEFAULT_LABELS } from "@/components/Body";
 import { LineChart } from "@/components/LineChart";
@@ -37,6 +38,24 @@ export function Logo({ size = 40 }: { size?: number }) {
       <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 24 24" fill="none" stroke="#111113" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true">
         <path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12" />
       </svg>
+    </span>
+  );
+}
+
+/** Logo do personal (se ele cadastrou) ou do Carga, no topo dos PDFs */
+export function BrandMark({ size = 38, text = 22 }: { size?: number; text?: number }) {
+  const b = cachedBrand();
+  if (b?.logo)
+    return (
+      <span className="flex items-center gap-2.5 font-bold tracking-[-0.4px]" style={{ fontSize: text }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={b.logo} alt="" crossOrigin="anonymous" style={{ height: size, width: "auto", maxWidth: size * 3, objectFit: "contain" }} />
+        {b.name}
+      </span>
+    );
+  return (
+    <span className="flex items-center gap-2.5 font-bold tracking-[-0.4px]" style={{ fontSize: text }}>
+      <Logo size={size} /> Carga
     </span>
   );
 }
@@ -117,9 +136,7 @@ export function ReportPages({ d, trainer }: { d: ReportData; trainer?: { name: s
       {/* 1. capa e resumo */}
       <Page n={1} total={total}>
         <div className="flex items-center justify-between">
-          <span className="flex items-center gap-2.5 text-[22px] font-bold tracking-[-0.4px]">
-            <Logo size={38} /> Carga
-          </span>
+          <BrandMark size={38} text={22} />
           <span className="rounded-full bg-[#FFF1DE] px-3 py-1 text-[12px] font-bold tracking-wide" style={{ color: INK }}>
             RELATÓRIO DE EVOLUÇÃO
           </span>

@@ -1,4 +1,5 @@
 // Área do personal: tipos, chamadas ao banco e cálculos (avaliação física, Pix, mensagens prontas)
+import type { CardioData, FunctionalData } from "./assess-tests";
 import { supabase } from "./supabase/client";
 import { getUserId } from "./data";
 import { shrinkImage } from "./image";
@@ -59,6 +60,8 @@ export type Assessment = {
   fat_mass: number | null;
   lean_mass: number | null;
   posture: { photos?: Partial<Record<"frente" | "lado" | "costas", string>>; findings?: string[] };
+  cardio?: CardioData | null;
+  functional?: FunctionalData | null;
   notes: string | null;
   created_at: string;
 };
@@ -197,7 +200,7 @@ export const POSTURE_FINDINGS = [
 ];
 
 // ---------- anamnese ----------
-export type Question = { key: string; label: string; type: "choice" | "yesno" | "text" | "number"; options?: string[]; parq?: boolean };
+export type Question = { key: string; label: string; type: "choice" | "multi" | "yesno" | "text" | "number"; options?: string[]; parq?: boolean };
 export const ANAMNESE: { title: string; questions: Question[] }[] = [
   {
     title: "Objetivo e rotina",
@@ -207,6 +210,8 @@ export const ANAMNESE: { title: string; questions: Question[] }[] = [
       { key: "dias", label: "Quantos dias por semana pode treinar?", type: "choice", options: ["2", "3", "4", "5", "6"] },
       { key: "tempo", label: "Quanto tempo tem por treino?", type: "choice", options: ["30 min", "45 min", "1 hora", "Mais de 1 hora"] },
       { key: "local", label: "Onde vai treinar?", type: "choice", options: ["Academia", "Em casa", "Ao ar livre", "Condomínio"] },
+      { key: "profissao", label: "Qual é a sua profissão?", type: "text" },
+      { key: "rotina", label: "Como é sua rotina de trabalho?", type: "choice", options: ["Horário comercial", "Turnos ou plantões", "Home office", "Muito tempo em pé", "Muito tempo sentado", "Não trabalho"] },
     ],
   },
   {
@@ -224,7 +229,8 @@ export const ANAMNESE: { title: string; questions: Question[] }[] = [
   {
     title: "Saúde",
     questions: [
-      { key: "lesoes", label: "Tem ou teve lesões ou dores? Onde?", type: "text" },
+      { key: "dores", label: "Onde você sente dor hoje? Pode marcar mais de um.", type: "multi", options: ["Joelho", "Coluna lombar", "Pescoço", "Ombro", "Quadril", "Punho ou cotovelo", "Tornozelo", "Nenhuma"] },
+      { key: "lesoes", label: "Conte mais sobre as dores ou lesões (diagnóstico, há quanto tempo)", type: "text" },
       { key: "doencas", label: "Tem alguma condição de saúde (pressão alta, diabetes, asma…)?", type: "text" },
       { key: "medicamentos", label: "Usa algum medicamento?", type: "text" },
       { key: "cirurgias", label: "Já fez cirurgias? Quais e quando?", type: "text" },

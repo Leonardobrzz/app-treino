@@ -71,7 +71,20 @@ export default function AnswerAnamnese() {
           {sec.questions.map((q) => (
             <div key={q.key} className="flex flex-col gap-2">
               <span className="text-[16px] font-semibold leading-snug">{q.label}</span>
-              {q.type === "text" ? (
+              {q.type === "multi" ? (
+                <div className="flex flex-wrap gap-2">
+                  {q.options!.map((o) => {
+                    const cur = (ans[q.key] ?? "").split(", ").filter(Boolean);
+                    const on = cur.includes(o);
+                    const next = o === "Nenhuma" ? (on ? [] : ["Nenhuma"]) : on ? cur.filter((x) => x !== o) : [...cur.filter((x) => x !== "Nenhuma"), o];
+                    return (
+                      <motion.button key={o} whileTap={{ scale: 0.94 }} onClick={() => set(q.key, next.join(", "))} aria-pressed={on} className={`h-11 rounded-xl px-4 text-[15px] font-semibold ${on ? "bg-accent text-on-accent" : "bg-card"}`}>
+                        {o}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              ) : q.type === "text" ? (
                 <textarea value={ans[q.key] ?? ""} onChange={(e) => set(q.key, e.target.value.slice(0, 500))} rows={2} placeholder="Se não tiver, deixe em branco" className="w-full resize-none rounded-xl bg-card px-3.5 py-2.5 text-[16px] outline-none ring-accent placeholder:text-label-3 focus:ring-2" />
               ) : (
                 <div className="flex flex-wrap gap-2">

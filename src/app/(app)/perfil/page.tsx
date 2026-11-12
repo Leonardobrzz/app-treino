@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, Header, Icon, Segmented, Spinner, type IconName } from "@/components/ui";
 import { ProBadge } from "@/components/ProLock";
+import { PAIN_OPTIONS } from "@/lib/plan-generator";
 import { getProfile, getSubscription } from "@/lib/data";
 import { isPro, type Subscription } from "@/lib/pro";
 import { supabase } from "@/lib/supabase/client";
@@ -92,6 +93,26 @@ export default function ProfilePage() {
             ))}
           </div>
         </div>
+        <div className="flex flex-col gap-2 border-t border-sep px-4 py-3">
+          <span className="flex flex-col">
+            <span className="text-[16px] font-medium">Dores ou lesões</span>
+            <span className="text-[13px] text-label-2">O treino automático evita o que pode piorar</span>
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {PAIN_OPTIONS.map((o) => {
+              const on = (p.pains ?? []).includes(o.id);
+              return (
+                <button key={o.id} aria-pressed={on} onClick={() => save({ pains: on ? (p.pains ?? []).filter((x) => x !== o.id) : [...(p.pains ?? []), o.id] })} className={`press h-8 rounded-full px-3.5 text-[14px] font-medium ${on ? "bg-bad text-white" : "bg-card-2"}`}>
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <label className="flex items-center justify-between gap-3 border-t border-sep px-4 py-3">
+          <span className="text-[16px] font-medium">Profissão</span>
+          <input defaultValue={p.profession ?? ""} onBlur={(e) => save({ profession: e.target.value.trim().slice(0, 80) || null })} placeholder="Opcional" className="min-w-0 flex-1 bg-transparent text-right text-[16px] outline-none placeholder:text-label-3" />
+        </label>
       </Card>
 
       {(

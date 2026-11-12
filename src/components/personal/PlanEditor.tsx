@@ -89,13 +89,14 @@ export function PlanEditor({ d, onSent, trainer }: { d: StudentDetail; onSent: (
         days: wds,
         minutes: p.session_minutes ?? 60,
         priorities: p.priority_muscles ?? [],
+        pains: p.pains ?? [],
       },
       catalog,
     );
     const next: Day[] = plan.days.map((g) => ({
       weekday: g.weekday,
       title: g.title,
-      exercises: g.exercises.map((e) => ({ k: ++uid, exercise_id: e.exercise.id, name: e.exercise.name, muscle_group: e.exercise.muscle_group, equipment: e.exercise.equipment, sets: e.sets, reps: e.reps, target_weight: null, rest_seconds: e.rest, notes: null, method: null })),
+      exercises: g.exercises.map((e) => ({ k: ++uid, exercise_id: e.exercise.id, name: e.exercise.name, muscle_group: e.exercise.muscle_group, equipment: e.exercise.equipment, sets: e.sets, reps: e.reps, target_weight: null, rest_seconds: e.rest, notes: e.note ?? null, method: null })),
     }));
     setDays(next);
     setSel(next[0]?.weekday ?? null);

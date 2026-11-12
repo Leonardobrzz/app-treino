@@ -18,6 +18,7 @@ import { DietTab } from "@/components/personal/DietTab";
 import { MealsTab } from "@/components/personal/MealsTab";
 import { ageFrom, claimLink, inviteText, studentDetail, waLink, type StudentDetail } from "@/lib/personal";
 import { Field2, inputCls } from "@/components/personal/common";
+import { PAIN_OPTIONS, painLabel } from "@/lib/plan-generator";
 import { Segmented } from "@/components/ui";
 import { supabase } from "@/lib/supabase/client";
 
@@ -50,6 +51,7 @@ export default function StudentPage() {
   const [claim, setClaim] = useState<string | null>(null);
   const [editing, setEditing] = useState<null | { name: string; sex: "masculino" | "feminino"; birth: string; height: string }>(null);
   const [copied, setCopied] = useState(false);
+  const [info, setInfo] = useState<null | { profession: string; pains: string[] }>(null);
 
   const load = useCallback(async () => {
     try {
@@ -78,6 +80,13 @@ export default function StudentPage() {
     load();
     supabase().from("guest_students").select("claim_code").eq("id", id).is("claimed_by", null).maybeSingle().then(({ data }) => setClaim(data?.claim_code ?? null));
   }, [me, load, id]);
+
+  async function saveInfo() {
+    if (!info) return;
+    await supabase().rpc("trainer_set_student_info", { p_student: id, p_profession: info.profession, p_pains: info.pains });
+    setInfo(null);
+    load();
+  }
 
   async function saveGuest() {
     if (!editing) return;
@@ -124,6 +133,27 @@ export default function StudentPage() {
             </div>
             <QuickMessage name={p.name ?? "Aluno"} phone={d!.link.phone} className="!h-11 !w-11" />
           </motion.div>
+        ) : null}
+        {p ? (
+          <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={() => setInfo({ profession: p.profession ?? "", pains: p.pains ?? [] })} className="press mt-2.5 flex w-full flex-wrap items-center gap-1.5 text-left" aria-label="Profissão e dores do aluno">
+            {p.profession ? (
+              <span className="inline-flex h-7 items-center gap-1 rounded-full bg-card px-2.5 text-[13px] font-semibold">
+                <Icon name="building" size={14} className="text-label-2" /> {p.profession}
+              </span>
+            ) : null}
+            {(p.pains ?? []).map((x) => (
+              <span key={x} className="inline-flex h-7 items-center rounded-full bg-bad/15 px-2.5 text-[13px] font-semibold text-bad">
+                Dor: {painLabel(x).toLowerCase()}
+              </span>
+            ))}
+            {!p.profession && !(p.pains ?? []).length ? (
+              <span className="inline-flex h-7 items-center gap-1 rounded-full border border-dashed border-fill px-2.5 text-[13px] font-semibold text-accent-ink">
+                <Icon name="plus" size={13} /> Profissão e dores
+              </span>
+            ) : (
+              <span className="inline-flex h-7 items-center px-1 text-[13px] font-semibold text-accent-ink">Editar</span>
+            )}
+          </motion.button>
         ) : (
           <div className="h-14" />
         )}
@@ -202,6 +232,30 @@ export default function StudentPage() {
               </Field2>
             </div>
             <Button size="lg" onClick={saveGuest}>Salvar</Button>
+          </div>
+        )}
+      </Sheet>
+
+      <Sheet open={!!info} onClose={() => setInfo(null)} title="Profissão e dores">
+        {info && (
+          <div className="flex flex-col gap-3 pt-1">
+            <Field2 label="Profissão">
+              <input value={info.profession} onChange={(e) => setInfo({ ...info, profession: e.target.value.slice(0, 80) })} placeholder="Ex.: enfermeira, trabalha em plantão" className={inputCls} />
+            </Field2>
+            <span className="text-[13px] font-semibold text-label-2">Onde sente dor</span>
+            <div className="grid grid-cols-2 gap-2">
+              {PAIN_OPTIONS.map((o) => {
+                const on = info.pains.includes(o.id);
+                return (
+                  <button key={o.id} aria-pressed={on} onClick={() => setInfo({ ...info, pains: on ? info.pains.filter((x) => x !== o.id) : [...info.pains, o.id] })} className={`press flex flex-col items-start rounded-xl px-3 py-2 text-left ${on ? "bg-bad/15 text-bad" : "bg-card"}`}>
+                    <span className="text-[15px] font-semibold">{o.label}</span>
+                    <span className={`text-[12px] ${on ? "" : "text-label-2"}`}>{o.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[13px] leading-snug text-label-2">Aparece no topo do aluno e entra no treino automático e na IA. O aluno também informa na anamnese.</p>
+            <Button size="lg" onClick={saveInfo}>Salvar</Button>
           </div>
         )}
       </Sheet>

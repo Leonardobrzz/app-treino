@@ -11,11 +11,58 @@ export type GenInput = {
   days: number[]; // 0 = domingo … 6 = sábado
   minutes: number;
   priorities: string[]; // rótulos de PRIORITY_OPTIONS
+  pains?: string[]; // ids de PAIN_OPTIONS
 };
 
-export type GenExercise = { exercise: Exercise; sets: number; reps: string; rest: number };
+export type GenExercise = { exercise: Exercise; sets: number; reps: string; rest: number; note?: string };
 export type GenDay = { weekday: number; title: string; focus: string; exercises: GenExercise[]; minutes: number };
-export type GenPlan = { name: string; days: GenDay[] };
+export type GenPlan = { name: string; days: GenDay[]; removed: string[] };
+
+/** Dores e lesões que o treino automático leva em conta */
+export const PAIN_OPTIONS: { id: string; label: string; hint: string }[] = [
+  { id: "joelho", label: "Joelho", hint: "condromalácia, menisco, ligamento" },
+  { id: "lombar", label: "Coluna lombar", hint: "hérnia de disco, lombalgia" },
+  { id: "cervical", label: "Pescoço", hint: "cervicalgia, hérnia cervical" },
+  { id: "ombro", label: "Ombro", hint: "manguito, bursite, impacto" },
+  { id: "quadril", label: "Quadril", hint: "bursite, impacto no quadril" },
+  { id: "punho", label: "Punho ou cotovelo", hint: "tendinite, epicondilite" },
+  { id: "tornozelo", label: "Tornozelo", hint: "entorses, fascite" },
+];
+export const painLabel = (id: string) => PAIN_OPTIONS.find((p) => p.id === id)?.label ?? id;
+
+// Exercícios que costumam forçar cada região (comparação sem acento, por trecho do nome)
+const AVOID: Record<string, string[]> = {
+  joelho: ["agachamento livre", "agachamento frontal", "agachamento hack", "agachamento bulgaro", "agachamento sumo", "agachamento com kettlebell", "afundo", "passada", "cadeira extensora", "pular corda", "burpee", "nordic", "salto"],
+  lombar: ["levantamento terra", "stiff", "remada curvada", "agachamento livre", "agachamento frontal", "good morning", "abdominal supra", "abdominal remador", "abdominal bicicleta", "kettlebell swing", "burpee", "elevacao de pernas"],
+  cervical: ["encolhimento", "desenvolvimento", "abdominal supra", "abdominal bicicleta", "tríceps testa", "triceps testa"],
+  ombro: ["desenvolvimento", "elevacao frontal", "paralelas", "triceps banco", "supino reto com barra", "supino inclinado com barra", "barra fixa", "puxada atras", "triceps frances", "burpee"],
+  quadril: ["agachamento sumo", "agachamento bulgaro", "agachamento livre", "afundo", "passada", "kettlebell swing", "cadeira abdutora"],
+  punho: ["flexao de braco", "triceps banco", "rosca direta com barra", "triceps testa", "paralelas", "burpee", "prancha"],
+  tornozelo: ["pular corda", "burpee", "passada", "afundo", "panturrilha em pe", "salto"],
+};
+const REGION: Record<string, string[]> = {
+  joelho: ["Quadríceps", "Posterior de coxa", "Glúteos"],
+  lombar: ["Costas", "Posterior de coxa", "Abdômen"],
+  cervical: ["Ombros", "Trapézio"],
+  ombro: ["Peito", "Ombros", "Tríceps"],
+  quadril: ["Glúteos", "Quadríceps"],
+  punho: ["Bíceps", "Tríceps"],
+  tornozelo: ["Panturrilha"],
+};
+const PAIN_NOTE: Record<string, string> = {
+  joelho: "Joelho: amplitude sem dor, desça devagar.",
+  lombar: "Lombar: coluna neutra e abdômen firme.",
+  cervical: "Pescoço: sem tensionar o pescoço.",
+  ombro: "Ombro: sem passar da linha do ombro se doer.",
+  quadril: "Quadril: amplitude confortável.",
+  punho: "Punho: pegada neutra se incomodar.",
+  tornozelo: "Tornozelo: apoio firme, sem impacto.",
+};
+const unaccent = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+export function avoidedBy(pains: string[], name: string) {
+  const n = unaccent(name);
+  return pains.find((p) => (AVOID[p] ?? []).some((a) => n.includes(unaccent(a))));
+}
 
 export const PRIORITY_OPTIONS = ["Peito", "Costas", "Ombros", "Braços", "Abdômen", "Pernas", "Glúteos", "Panturrilha"] as const;
 const PRIORITY_GROUPS: Record<string, string[]> = {
@@ -77,7 +124,19 @@ const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").to
 
 export function generatePlan(input: GenInput, catalog: Exercise[]): GenPlan {
   const allowed = EQUIPMENT[input.location];
-  const pool = catalog.filter((e) => !e.created_by && (!allowed || allowed.includes(e.equipment)));
+  const pains = input.pains ?? [];
+  const base = catalog.filter((e) => !e.created_by && (!allowed || allowed.includes(e.equipment)));
+  const removedList: Exercise[] = [];
+  const pool = base.filter((e) => {
+    if (!avoidedBy(pains, e.name)) return true;
+    if ((PREFERRED[e.muscle_group] ?? []).some((n) => norm(n) === norm(e.name))) removedList.push(e);
+    return false;
+  });
+  // os mais conhecidos primeiro (agachamento, terra, supino...) pra mensagem fazer sentido
+  const GROUP_ORDER = ["Quadríceps", "Posterior de coxa", "Costas", "Peito", "Ombros", "Glúteos", "Tríceps", "Bíceps", "Panturrilha", "Abdômen", "Trapézio", "Cardio"];
+  const prefIdx = (e: Exercise) => (PREFERRED[e.muscle_group] ?? []).findIndex((n) => norm(n) === norm(e.name));
+  removedList.sort((a, b) => GROUP_ORDER.indexOf(a.muscle_group) - GROUP_ORDER.indexOf(b.muscle_group) || prefIdx(a) - prefIdx(b));
+  const noteFor = (g: string) => pains.filter((p) => (REGION[p] ?? []).includes(g)).map((p) => PAIN_NOTE[p]).join(" ") || undefined;
   const byGroup = (g: string) => {
     const list = pool.filter((e) => e.muscle_group === g);
     const pref = (PREFERRED[g] ?? []).map((n) => list.find((e) => norm(e.name) === norm(n))).filter(Boolean) as Exercise[];
@@ -118,6 +177,7 @@ export function generatePlan(input: GenInput, catalog: Exercise[]): GenPlan {
           sets: compound && input.level !== "iniciante" ? baseSets + (input.level === "avancado" ? 0 : 1) : baseSets,
           reps: g === "Abdômen" ? "15" : compound && input.level !== "iniciante" && input.goal !== "perder" ? "6-10" : reps,
           rest: compound ? 120 : g === "Abdômen" ? 45 : 75,
+          note: noteFor(g),
         });
         used.set(pick.id, (used.get(pick.id) ?? 0) + 1);
       }
@@ -137,7 +197,7 @@ export function generatePlan(input: GenInput, catalog: Exercise[]): GenPlan {
   });
 
   const split = days.length === 4 ? "Superiores e inferiores" : days.length === 5 ? "Empurrar, puxar, pernas + sup/inf" : days.length >= 6 ? "Empurrar, puxar, pernas" : days.length === 3 && input.level !== "iniciante" ? "Empurrar, puxar, pernas" : "Corpo inteiro";
-  return { name: `${split} · ${days.length}x por semana`, days: out };
+  return { name: `${split} · ${days.length}x por semana`, days: out, removed: removedList.map((e) => e.name) };
 }
 
 /** Exercícios equivalentes (mesmo grupo), na ordem de preferência — usado no "máquina ocupada" */

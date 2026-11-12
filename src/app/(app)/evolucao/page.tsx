@@ -6,15 +6,15 @@ import { motion } from "motion/react";
 import { LineChart } from "@/components/LineChart";
 import { ProBadge, ProLock } from "@/components/ProLock";
 import { getSubscription } from "@/lib/data";
-import { isPro } from "@/lib/pro";
+import { FREE_HISTORY_DAYS, freeCutoff, isPro } from "@/lib/pro";
 import { Card, Empty, Header, Icon, LinkButton, SectionTitle, Segmented, Spinner, Stat } from "@/components/ui";
 import { supabase } from "@/lib/supabase/client";
 import { epley, fmtDate, num } from "@/lib/util";
 
 type Row = { weight: number; reps: number; exercise_id: string; session_id: string; exercises: { name: string; muscle_group: string } };
 type Ses = { id: string; title: string; started_at: string; finished_at: string };
-type Period = "semana" | "mes" | "ano";
-const DAYS: Record<Period, number> = { semana: 7, mes: 30, ano: 365 };
+type Period = "semana" | "quinzena" | "mes" | "ano";
+const DAYS: Record<Period, number> = { semana: 7, quinzena: 14, mes: 30, ano: 365 };
 
 export default function EvolutionPage() {
   const [period, setPeriod] = useState<Period>("semana");
@@ -94,13 +94,13 @@ export default function EvolutionPage() {
     <>
       <Header title="Evolução" />
       <div className="px-5 pt-2">
-        <Segmented<Period> value={period} onChange={setPeriod} options={[{ value: "semana", label: "Semana" }, { value: "mes", label: "Mês" }, { value: "ano", label: "Ano" }]} />
+        <Segmented<Period> value={period} onChange={setPeriod} options={[{ value: "semana", label: "7 dias" }, { value: "quinzena", label: "14 dias" }, { value: "mes", label: "Mês" }, { value: "ano", label: "Ano" }]} />
       </div>
       {loading ? (
         <Spinner />
       ) : (
         <>
-          <ProLock locked={!pro && period === "ano"} title="Evolução do ano inteiro" text="Veja volume, treinos e recordes dos últimos 12 meses com o Pro.">
+          <ProLock locked={!pro && (period === "mes" || period === "ano")} title={period === "ano" ? "Evolução do ano inteiro" : "Evolução do mês"} text={`No grátis você vê os últimos ${FREE_HISTORY_DAYS} dias. Com o Pro, o mês, o ano e todo o histórico.`}>
           <motion.div key={period} initial={{ opacity: 0.4, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 400, damping: 30 }} className="grid grid-cols-2 gap-3 px-5 pt-4">
             <Stat label="Volume" value={stats.volume >= 10000 ? num(stats.volume / 1000, 1) : num(stats.volume, 0)} unit={stats.volume >= 10000 ? "t" : "kg"} foot={stats.volDelta == null ? "Peso × repetições" : `${stats.volDelta >= 0 ? "+" : "−"}${Math.abs(stats.volDelta)}% vs. anterior`} footTone={stats.volDelta != null && stats.volDelta >= 0 ? "good" : "muted"} />
             <Stat label="Treinos" value={String(stats.count)} foot={`${stats.prevCount} no período anterior`} />
@@ -221,7 +221,7 @@ export default function EvolutionPage() {
 
               <SectionTitle>Últimos treinos</SectionTitle>
               <ul className="mx-5 overflow-hidden rounded-2xl bg-card">
-                {[...sessions].reverse().slice(0, 8).map((s) => {
+                {[...sessions].reverse().filter((s) => pro || new Date(s.started_at).getTime() >= freeCutoff()).slice(0, 8).map((s) => {
                   const ss = sets.filter((r) => r.session_id === s.id);
                   const vol = ss.reduce((a, r) => a + Number(r.weight) * r.reps, 0);
                   return (
@@ -234,6 +234,13 @@ export default function EvolutionPage() {
                     </li>
                   );
                 })}
+                {!pro && sessions.some((s) => new Date(s.started_at).getTime() < freeCutoff()) && (
+                  <li>
+                    <Link href="/pro" className="press flex items-center justify-center gap-2 px-4 py-3 text-[14px] font-semibold text-accent-ink">
+                      <Icon name="lock" size={15} /> Treinos com mais de {FREE_HISTORY_DAYS} dias ficam no Pro
+                    </Link>
+                  </li>
+                )}
               </ul>
             </>
           )}

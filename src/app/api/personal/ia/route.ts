@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { painLabel } from "@/lib/plan-generator";
 import { NextResponse, type NextRequest } from "next/server";
 import { MODEL_PRO } from "@/lib/ai-models";
 import { aiError } from "@/lib/ai-errors";
@@ -103,6 +104,7 @@ ${catalogText}`;
     const perfil = {
       nome: p.name, sexo: p.sex, nascimento: p.birth_date, altura_cm: p.height_cm, objetivo: p.goal, nivel: p.level, local: p.location,
       dias_que_treina: p.training_days, minutos_por_treino: p.session_minutes, prioridades: p.priority_muscles,
+      profissao: p.profession, dores_e_lesoes: ((p.pains as string[] | undefined) ?? []).map(painLabel),
       treinos_nos_ultimos_120_dias: (d.sessions ?? []).length,
     };
     system = `Você ajuda um personal trainer a montar a semana de treino de um aluno no app Carga. O personal vai revisar antes de enviar.

@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import { useId } from "react";
 
-export function LineChart({ points, height = 150, format = (v: number) => String(v), label }: { points: { x: string; y: number }[]; height?: number; format?: (v: number) => string; label: string }) {
+export function LineChart({ points, height = 150, format = (v: number) => String(v), label, still = false }: { points: { x: string; y: number }[]; height?: number; format?: (v: number) => string; label: string; still?: boolean }) {
   const id = useId();
   const W = 340;
   const H = height;
@@ -36,9 +36,9 @@ export function LineChart({ points, height = 150, format = (v: number) => String
       {[0.25, 0.5, 0.75].map((f) => (
         <line key={f} x1="0" x2={W} y1={10 + f * (H - 30)} y2={10 + f * (H - 30)} stroke="var(--sep)" strokeWidth="1" />
       ))}
-      <motion.path d={area} fill={`url(#${id})`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3, duration: 0.5 }} />
-      <motion.path d={line} fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9, ease: [0.2, 0.8, 0.2, 1] }} />
-      <motion.circle cx={px(points.length - 1)} cy={py(last.y)} r="5.5" fill="var(--card)" stroke="var(--accent)" strokeWidth="3" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.85, type: "spring", stiffness: 500, damping: 18 }} />
+      <motion.path d={area} fill={`url(#${id})`} initial={still ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3, duration: 0.5 }} />
+      <motion.path d={line} fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" initial={still ? false : { pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9, ease: [0.2, 0.8, 0.2, 1] }} />
+      <motion.circle cx={px(points.length - 1)} cy={py(last.y)} r="5.5" fill="var(--card)" stroke="var(--accent)" strokeWidth="3" initial={still ? false : { scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.85, type: "spring", stiffness: 500, damping: 18 }} />
       {ticks.map((i) => (
         <text key={i} x={px(i)} y={H - 3} fontSize="11" fill="var(--label-2)" textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}>
           {points[i].x}

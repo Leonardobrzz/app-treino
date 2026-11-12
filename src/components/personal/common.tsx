@@ -7,6 +7,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Avatar } from "@/components/PostCard";
 import { Icon, Sheet, type IconName } from "@/components/ui";
 import { getProfile } from "@/lib/data";
+import { useBrand } from "@/components/BrandTheme";
 import { TEMPLATES, waLink } from "@/lib/personal";
 import type { Profile } from "@/lib/types";
 
@@ -32,7 +33,7 @@ export function PersonalNav() {
   const pill = <motion.span layoutId="pnav" className="absolute inset-0 rounded-full bg-accent" transition={{ type: "spring", stiffness: 500, damping: 36 }} />;
   return (
     <>
-      <nav aria-label="Área do personal" className="no-scrollbar sticky top-0 z-30 -mt-1 flex gap-1.5 overflow-x-auto bg-bg/90 px-5 py-2 backdrop-blur-xl">
+      <nav aria-label="Área do personal" className="no-scrollbar sticky top-0 z-30 -mt-1 flex lg:hidden gap-1.5 overflow-x-auto bg-bg/90 px-5 py-2 backdrop-blur-xl">
         {MAIN.map((t) => (
           <Link key={t.href} href={t.href} aria-current={on(t.href) ? "page" : undefined} className={chip(on(t.href))}>
             {on(t.href) && pill}
@@ -67,6 +68,54 @@ export function PersonalNav() {
   );
 }
 
+const SIDE: { href: string; label: string; icon: IconName }[] = [
+  { href: "/personal", label: "Painel", icon: "home" },
+  { href: "/personal/alunos", label: "Alunos", icon: "users" },
+  { href: "/personal/agenda", label: "Agenda", icon: "calendar" },
+  { href: "/personal/cobrancas", label: "Cobranças", icon: "pix" },
+  { href: "/personal/relatorios", label: "Relatórios", icon: "download" },
+  { href: "/personal/desafios", label: "Desafios", icon: "trophy" },
+];
+
+/** No computador: menu lateral enxuto da área do personal */
+export function PersonalSidebar() {
+  const path = usePathname();
+  if (!path.startsWith("/personal") || path === "/personal/comecar") return null;
+  const on = (h: string) => (h === "/personal" ? path === h : path.startsWith(h) || (h === "/personal/alunos" && path.startsWith("/personal/aluno/")));
+  const item = (t: { href: string; label: string; icon: IconName }) => (
+    <Link key={t.href} href={t.href} aria-current={on(t.href) ? "page" : undefined} className={`press relative flex h-11 items-center gap-3 rounded-xl px-3 text-[15px] font-semibold ${on(t.href) ? "text-on-accent" : "text-label-2 hover:bg-card"}`}>
+      {on(t.href) && <motion.span layoutId="pside" className="absolute inset-0 rounded-xl bg-accent" transition={{ type: "spring", stiffness: 500, damping: 36 }} />}
+      <span className="relative flex items-center gap-3">
+        <Icon name={t.icon} size={19} />
+        {t.label}
+      </span>
+    </Link>
+  );
+  return (
+    <aside aria-label="Menu da área do personal" className="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col gap-1 border-r border-sep bg-bg px-3 py-6 lg:flex">
+      <Link href="/personal" className="mb-5 flex items-center gap-2.5 px-2">
+        <span className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-accent">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111113" strokeWidth="2.6" strokeLinecap="round" aria-hidden="true"><path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12" /></svg>
+        </span>
+        <span className="flex flex-col leading-tight">
+          <span className="text-[17px] font-bold">Carga</span>
+          <span className="text-[11px] font-semibold tracking-wide text-accent-ink">PERSONAL</span>
+        </span>
+      </Link>
+      {SIDE.map(item)}
+      <div className="mt-auto flex flex-col gap-1 border-t border-sep pt-3">
+        {item({ href: "/personal/perfil", label: "Meu perfil", icon: "user" })}
+        <Link href="/ajuda?p=personal" className="press flex h-10 items-center gap-3 rounded-xl px-3 text-[14px] font-medium text-label-2 hover:bg-card">
+          <Icon name="help" size={18} /> Como usar
+        </Link>
+        <Link href="/" className="press flex h-10 items-center gap-3 rounded-xl px-3 text-[14px] font-medium text-label-2 hover:bg-card">
+          <Icon name="back" size={18} /> Voltar pro meu treino
+        </Link>
+      </div>
+    </aside>
+  );
+}
+
 /** Carrega o perfil e manda pro cadastro de personal se ainda não for */
 export function useTrainer() {
   const router = useRouter();
@@ -81,10 +130,15 @@ export function useTrainer() {
 }
 
 export function PHeader({ title, sub, right }: { title: string; sub?: string; right?: ReactNode }) {
+  const brand = useBrand();
   return (
     <header className="safe-top flex items-end justify-between gap-3 px-5 pb-2">
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-[13px] font-semibold tracking-wide text-accent-ink">ÁREA DO PERSONAL</span>
+        <span className="flex items-center gap-1.5 text-[13px] font-semibold tracking-wide text-accent-ink">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {brand?.logo && <img src={brand.logo} alt="" className="h-5 w-auto max-w-[60px] object-contain" />}
+          ÁREA DO PERSONAL
+        </span>
         <h1 className="truncate font-[family-name:var(--font-display)] text-[32px] font-bold leading-tight tracking-[-0.5px]">{title}</h1>
         {sub && <span className="text-[14px] text-label-2">{sub}</span>}
       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { CardioView, FmsView } from "@/components/personal/AssessTests";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Card, Icon } from "@/components/ui";
@@ -73,8 +74,8 @@ export function AssessmentView({ a, prev }: { a: Assessment; prev?: Assessment |
         {[
           ["Peso", a.weight != null ? `${num(Number(a.weight))} kg` : "–", <D key="w" v={delta("weight")} good="down" />],
           ["IMC", bmi ? num(bmi) : "–", null],
-          ["Massa magra", a.lean_mass != null ? `${num(Number(a.lean_mass))} kg` : "–", <D key="l" v={delta("lean_mass")} good="up" />],
-          ["Massa gorda", a.fat_mass != null ? `${num(Number(a.fat_mass))} kg` : "–", <D key="f" v={delta("fat_mass")} good="down" />],
+          ...(a.lean_mass != null ? [["Massa magra", `${num(Number(a.lean_mass))} kg`, <D key="l" v={delta("lean_mass")} good="up" />] as const] : []),
+          ...(a.fat_mass != null ? [["Massa gorda", `${num(Number(a.fat_mass))} kg`, <D key="f" v={delta("fat_mass")} good="down" />] as const] : []),
           ...(rcq ? [["Cintura/quadril", num(rcq, 2), null] as const] : []),
           ...(a.height ? [["Altura", `${num(Number(a.height))} cm`, null] as const] : []),
         ].map(([l, v, d]) => (
@@ -120,6 +121,20 @@ export function AssessmentView({ a, prev }: { a: Assessment; prev?: Assessment |
             })}
           </div>
         </Card>
+      )}
+
+      {a.cardio && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-label-2">Cardiorrespiratória</span>
+          <CardioView c={a.cardio} />
+        </div>
+      )}
+
+      {a.functional && (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-semibold text-label-2">Avaliação funcional do movimento (FMS)</span>
+          <FmsView f={a.functional} />
+        </div>
       )}
 
       {(Object.keys(a.posture?.photos ?? {}).length > 0 || (a.posture?.findings ?? []).length > 0) && (
