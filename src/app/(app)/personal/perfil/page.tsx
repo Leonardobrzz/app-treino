@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
+import { savePerfil } from "@/components/RolePick";
 import { useEffect, useRef, useState } from "react";
 import { Button, Card, Icon, SectionTitle, Spinner } from "@/components/ui";
-import { Field2, PHeader, PersonalNav, inputCls, useTrainer } from "@/components/personal/common";
+import { Field2, PHeader, inputCls, useTrainer } from "@/components/personal/common";
 import { supabase } from "@/lib/supabase/client";
 import { BRAND_COLORS, applyBrand, logoUrl, onColor, prepareLogo } from "@/lib/brand";
 import { vibrate } from "@/lib/util";
 
 export default function TrainerProfile() {
   const me = useTrainer();
+  const router = useRouter();
   const [f, setF] = useState({ cref: "", trainer_city: "", whatsapp: "", trainer_bio: "", pix_key: "", pix_name: "" });
   const [pub, setPub] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -69,7 +72,6 @@ export default function TrainerProfile() {
   return (
     <>
       <PHeader title="Seu perfil" />
-      <PersonalNav />
 
       <SectionTitle>Links</SectionTitle>
       <Card className="mx-5 overflow-hidden">
@@ -173,6 +175,36 @@ export default function TrainerProfile() {
           Ver minha vitrine <Icon name="chevron" size={16} />
         </Link>
       )}
+
+      <SectionTitle>Conta</SectionTitle>
+      <Card className="mx-5 overflow-hidden">
+        {[
+          { href: "/", icon: "swap" as const, label: "Usar como aluno", sub: "Pra registrar os seus próprios treinos", go: () => savePerfil("aluno") },
+          { href: "/ajuda?p=personal", icon: "help" as const, label: "Como usar a área do personal", sub: "Passo a passo e dúvidas comuns" },
+          { href: "/avisos", icon: "bell" as const, label: "Avisos e notificações" },
+        ].map((l) => (
+          <Link key={l.href} href={l.href} onClick={l.go} className="press flex items-center gap-3 border-b border-sep px-4 py-3 last:border-b-0">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent-ink">
+              <Icon name={l.icon} size={18} />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-[16px]">{l.label}</span>
+              {l.sub && <span className="truncate text-[13px] text-label-2">{l.sub}</span>}
+            </span>
+            <Icon name="chevron" size={17} className="text-label-3" />
+          </Link>
+        ))}
+      </Card>
+      <button
+        onClick={async () => {
+          await supabase().auth.signOut();
+          router.replace("/login");
+          router.refresh();
+        }}
+        className="press mx-5 mt-3 flex h-12 w-[calc(100%-40px)] items-center justify-center gap-2 rounded-2xl bg-card text-[16px] font-semibold text-bad"
+      >
+        <Icon name="logout" size={18} /> Sair da conta
+      </button>
 
       <div className="sticky bottom-24 z-20 mx-5 mt-6">
         <Button size="lg" className="w-full shadow-xl" onClick={save}>{saved ? "Salvo ✓" : "Salvar"}</Button>

@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { Avatar } from "@/components/PostCard";
 import { Button, Icon, Sheet, Spinner } from "@/components/ui";
-import { PersonalNav, QuickMessage, useTrainer } from "@/components/personal/common";
+import { QuickMessage, useTrainer } from "@/components/personal/common";
 import { StudentSummary } from "@/components/personal/StudentSummary";
 import { PlanEditor } from "@/components/personal/PlanEditor";
 import { AssessmentsTab } from "@/components/personal/AssessmentsTab";
@@ -158,7 +158,6 @@ export default function StudentPage() {
           <div className="h-14" />
         )}
       </header>
-      <PersonalNav />
       <Tip id="p-aluno" className="pt-1">Tudo do aluno fica em 4 abas: Resumo, Treino, Avaliação e Financeiro. O botão verde no topo manda mensagem pronta no WhatsApp.</Tip>
       {claim && d && me?.trainer_code && (
         <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="mx-5 mb-2 flex flex-col gap-2.5 rounded-2xl bg-accent-soft p-3.5">

@@ -5,8 +5,9 @@ import { motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { CountUp, Stagger, StaggerItem } from "@/components/motion";
 import { Card, Icon, SectionTitle, Spinner } from "@/components/ui";
-import { PHeader, Pill, PersonalNav, QuickMessage, StudentLine, useTrainer } from "@/components/personal/common";
+import { PHeader, Pill, QuickMessage, StudentLine, useTrainer } from "@/components/personal/common";
 import { Checklist, NextStep } from "@/components/guide";
+import { QuickActions, ToolsGrid, WelcomeHero, greeting, useInvite } from "@/components/personal/HomeParts";
 import { BarChart, Donut } from "@/components/charts";
 import { TEMPLATES, waLink, brl, daysSince, guestMap, trainerDashboard, type Appointment, type Charge, type DashRow, type Guest } from "@/lib/personal";
 import { supabase } from "@/lib/supabase/client";
@@ -116,26 +117,36 @@ export default function TrainerHome() {
     return null;
   }, [rows, today, guests]);
 
+  const invite = useInvite(me?.trainer_code);
+  const firstName = me?.name?.split(" ")[0];
   const first = rows?.[0]?.student_id;
   const toStudent = (aba: string) => (first ? `/personal/aluno/${first}?aba=${aba}` : "/personal/alunos");
 
   return (
     <>
       <PHeader
-        title="Painel"
-        sub={me?.name ? `Olá, ${me.name.split(" ")[0]}` : undefined}
+        title={firstName ? `${greeting()}, ${firstName}` : greeting()}
+        sub={new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
         right={
           <Link href="/avisos" aria-label="Avisos" className="press mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-card text-accent-ink">
             <Icon name="bell" size={21} />
           </Link>
         }
       />
-      <PersonalNav />
       {error && <p className="mx-5 mt-2 text-[15px] text-bad">{error}</p>}
       {!rows ? (
         <Spinner />
       ) : (
         <Stagger delay={0.05}>
+          {rows.length === 0 ? (
+            <StaggerItem>
+              <WelcomeHero name={firstName} onInvite={invite.share} copied={invite.copied} />
+            </StaggerItem>
+          ) : (
+            <StaggerItem>
+              <QuickActions onInvite={invite.share} copied={invite.copied} />
+            </StaggerItem>
+          )}
           {next && (
             <StaggerItem>
               <NextStep {...next} />
@@ -157,7 +168,7 @@ export default function TrainerHome() {
             </StaggerItem>
           )}
 
-          <StaggerItem className="mx-5 mt-4 grid grid-cols-2 gap-3">
+          {rows.length > 0 && <StaggerItem className="mx-5 mt-4 grid grid-cols-2 gap-3">
             {[
               ["Alunos ativos", stats.active, (v: number) => String(Math.round(v)), `${stats.trained} ${stats.trained === 1 ? "treinou" : "treinaram"} na semana`],
               ["Recebido no mês", stats.paid, (v: number) => brl(v), `${brl(stats.open)} a receber`],
@@ -168,7 +179,7 @@ export default function TrainerHome() {
                 <span className="text-[12px] font-semibold text-label-2">{foot as string}</span>
               </Card>
             ))}
-          </StaggerItem>
+          </StaggerItem>}
 
           {charts && rows.length > 0 && (
             <StaggerItem>
@@ -277,6 +288,10 @@ export default function TrainerHome() {
               </motion.p>
             </StaggerItem>
           )}
+          <StaggerItem>
+            <SectionTitle>Ferramentas</SectionTitle>
+            <ToolsGrid />
+          </StaggerItem>
         </Stagger>
       )}
     </>

@@ -47,11 +47,9 @@ export default function TodayPage() {
         supabase().from("water_logs").select("ml").eq("logged_on", todayISO()),
         supabase().from("body_weights").select("weight").order("measured_on", { ascending: false }).limit(1).maybeSingle(),
       ]);
-      // Personal que entrou como "Sou personal": abre direto na área dele (uma vez por sessão,
-      // pra ainda conseguir usar o lado aluno pela barra de baixo).
+      // Modo personal: o app abre na área dele. Pra treinar, ele troca pra "Usar como aluno" no perfil.
       try {
-        if (p?.is_trainer && localStorage.getItem("perfil") === "personal" && !sessionStorage.getItem("abriu")) {
-          sessionStorage.setItem("abriu", "1");
+        if (p?.is_trainer && localStorage.getItem("perfil") === "personal") {
           router.replace("/personal");
           return;
         }

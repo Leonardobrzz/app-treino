@@ -4,7 +4,7 @@ import { Tip } from "@/components/guide";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Icon, Segmented, Sheet, Spinner } from "@/components/ui";
-import { Field2, PHeader, Pill, PersonalNav, StudentLine, inputCls, useTrainer } from "@/components/personal/common";
+import { Field2, PHeader, Pill, StudentLine, inputCls, useTrainer } from "@/components/personal/common";
 import { daysSince, guestMap, trainerDashboard, type DashRow, type Guest } from "@/lib/personal";
 import { supabase } from "@/lib/supabase/client";
 import { vibrate } from "@/lib/util";
@@ -20,6 +20,11 @@ export default function Students() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    // Atalho do Início: /personal/alunos?novo=1 já abre o cadastro.
+    if (new URLSearchParams(location.search).get("novo")) setAdding(true);
+  }, []);
 
   useEffect(() => {
     if (!me) return;
@@ -62,7 +67,6 @@ export default function Students() {
   return (
     <>
       <PHeader title="Alunos" sub={rows ? `${rows.length} ${rows.length === 1 ? "aluno ativo" : "alunos ativos"}` : undefined} />
-      <PersonalNav />
       <Tip id="p-alunos" className="pt-1">Toque num aluno pra ver tudo dele. Se ele ainda não tem o app, cadastre mesmo assim: quando entrar pelo link, recebe tudo.</Tip>
 
       <Card className="mx-5 mt-2 flex items-center gap-3 p-3.5">

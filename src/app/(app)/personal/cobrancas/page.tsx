@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CountUp } from "@/components/motion";
 import { Card, Icon, Segmented, Spinner } from "@/components/ui";
 import { ChargeRow, chargeTone } from "@/components/personal/ChargeRow";
-import { PHeader, PersonalNav, useTrainer } from "@/components/personal/common";
+import { PHeader, useTrainer } from "@/components/personal/common";
 import { brl, trainerDashboard, type Charge } from "@/lib/personal";
 import { supabase } from "@/lib/supabase/client";
 import { MONTHS_LONG, todayISO } from "@/lib/util";
@@ -56,7 +56,6 @@ export default function Charges() {
   return (
     <>
       <PHeader title="Cobranças" />
-      <PersonalNav />
       <Tip id="p-cobrancas" className="pt-1">Defina a mensalidade na aba Financeiro de cada aluno e o Carga cria a cobrança todo mês sozinho. O Pix cai direto na sua chave.</Tip>
       {me && !me.pix_key && (
         <Link href="/personal/perfil" className="press mx-5 mt-2 flex items-center gap-3 rounded-2xl bg-accent-soft p-4">

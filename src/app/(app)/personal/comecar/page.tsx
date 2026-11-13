@@ -8,6 +8,7 @@ import { Field2, inputCls } from "@/components/personal/common";
 import { getProfile } from "@/lib/data";
 import { supabase } from "@/lib/supabase/client";
 import { vibrate } from "@/lib/util";
+import { savePerfil } from "@/components/RolePick";
 
 const PERKS = [
   ["users", "Seus alunos num lugar só", "Treinos, frequência, cargas, medidas e fotos de cada um."],
@@ -29,7 +30,7 @@ export default function BecomeTrainer() {
 
   useEffect(() => {
     getProfile().then((p) => {
-      if (p?.is_trainer) router.replace("/personal");
+      if (p?.is_trainer) (savePerfil("personal"), router.replace("/personal"));
     });
   }, [router]);
 
@@ -42,6 +43,7 @@ export default function BecomeTrainer() {
       return setError("Não consegui ativar agora. Tenta de novo.");
     }
     vibrate([10, 40, 10]);
+    savePerfil("personal");
     router.replace("/personal");
   }
 

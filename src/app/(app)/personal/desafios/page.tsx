@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, Icon, Segmented, Sheet, Spinner } from "@/components/ui";
 import { Confetti } from "@/components/motion";
 import { ChallengeCard } from "@/components/personal/ChallengeCard";
-import { Field2, PHeader, PersonalNav, inputCls, useTrainer } from "@/components/personal/common";
+import { Field2, PHeader, inputCls, useTrainer } from "@/components/personal/common";
 import { type Challenge } from "@/lib/personal";
 import { pushNow } from "@/lib/push";
 import { supabase } from "@/lib/supabase/client";
@@ -66,7 +66,6 @@ export default function Challenges() {
           </button>
         }
       />
-      <PersonalNav />
       <p className="mx-5 mt-1 text-[14px] leading-snug text-label-2">Ranking entre os seus alunos. Só aparece quem aceitou entrar no ranking da turma.</p>
       {!list ? (
         <Spinner />

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Card, Icon, Spinner } from "@/components/ui";
-import { PHeader, PersonalNav, StudentLine, useTrainer } from "@/components/personal/common";
+import { PHeader, StudentLine, useTrainer } from "@/components/personal/common";
 import { trainerDashboard, type DashRow } from "@/lib/personal";
 import { MONTHS_LONG, todayISO } from "@/lib/util";
 
@@ -24,7 +24,6 @@ export default function Reports() {
   return (
     <>
       <PHeader title="Relatórios" sub="Um PDF por aluno com a evolução do mês, com seu nome e CREF" />
-      <PersonalNav />
       <div className="mx-5 mt-2 flex items-center justify-between">
         <button onClick={() => setM(new Date(m.getFullYear(), m.getMonth() - 1, 1))} aria-label="Mês anterior" className="press flex h-10 w-10 items-center justify-center rounded-full bg-card"><Icon name="back" size={20} /></button>
         <span className="text-[17px] font-semibold">{MONTHS_LONG[m.getMonth()]} {m.getFullYear()}</span>

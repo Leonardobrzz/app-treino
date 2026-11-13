@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { savePerfil } from "@/components/RolePick";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, Header, Icon, Segmented, Spinner, type IconName } from "@/components/ui";
@@ -119,7 +120,7 @@ export default function ProfilePage() {
         [
           ["PERSONAL", [
             { href: "/meu-personal", icon: "users", label: "Meu personal", sub: "Treinos, avaliações e pagamentos" },
-            { href: p.is_trainer ? "/personal" : "/personal/comecar", icon: "clipboard", label: p.is_trainer ? "Área do personal" : "Sou personal trainer", sub: p.is_trainer ? "Seus alunos, agenda e cobranças" : "Acompanhe e cobre seus alunos" },
+            { href: p.is_trainer ? "/personal" : "/personal/comecar", icon: "clipboard", label: p.is_trainer ? "Ir pra área do personal" : "Sou personal trainer", sub: p.is_trainer ? "O app abre direto nos seus alunos" : "Acompanhe e cobre seus alunos" },
           ]],
           ["MEU PROGRESSO", [
             { href: "/medidas", icon: "ruler", label: "Peso e medidas" },
@@ -144,7 +145,7 @@ export default function ProfilePage() {
           <h2 className="px-5 pb-2 pt-7 text-[13px] font-semibold text-label-2">{title}</h2>
           <Card className="mx-5 overflow-hidden">
             {items.map((l) => (
-              <Link key={l.href} href={l.href} className="press flex items-center gap-3 border-b border-sep px-4 py-3 last:border-b-0">
+              <Link key={l.href} href={l.href} onClick={() => l.href === "/personal" && savePerfil("personal")} className="press flex items-center gap-3 border-b border-sep px-4 py-3 last:border-b-0">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent-ink">
                   <Icon name={l.icon} size={18} />
                 </span>

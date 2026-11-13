@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Avatar } from "@/components/PostCard";
 import { Button, Card, Icon, Sheet, Spinner } from "@/components/ui";
-import { Field2, PHeader, Pill, PersonalNav, inputCls, useTrainer } from "@/components/personal/common";
+import { Field2, PHeader, Pill, inputCls, useTrainer } from "@/components/personal/common";
 import { trainerDashboard, type Appointment, type DashRow } from "@/lib/personal";
 import { pushNow } from "@/lib/push";
 import { supabase } from "@/lib/supabase/client";
@@ -85,7 +85,6 @@ export default function Agenda() {
           </button>
         }
       />
-      <PersonalNav />
       <Tip id="p-agenda" className="pt-1">Toque no + pra marcar uma aula. O aluno recebe aviso no celular, e de novo se você remarcar ou cancelar.</Tip>
       <div className="mx-5 mt-2 flex items-center justify-between">
         <button onClick={() => shift(-1)} aria-label="Semana anterior" className="press flex h-10 w-10 items-center justify-center rounded-full bg-card">

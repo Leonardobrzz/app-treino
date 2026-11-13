@@ -55,7 +55,8 @@ const PERSONAL: Section[] = [
     items: [
       { q: "Como ativo a área do personal?", a: "Em Perfil → Sou personal trainer. Preencha CREF, cidade, WhatsApp e chave Pix. Ela é grátis por enquanto.", href: "/personal/perfil", go: "Abrir meu perfil de personal" },
       { q: "Como coloco um aluno?", a: "Em Alunos, mande o convite (link ou código). Se o aluno ainda não tem o app, use \"Cadastrar aluno sem app\": você já avalia, fotografa, monta o treino e cobra. Quando ele entrar pelo link, tudo vai pra conta dele.", href: "/personal/alunos", go: "Abrir Alunos" },
-      { q: "O que o Painel mostra?", a: "No topo, o próximo passo mais importante (cobrança atrasada, aula de hoje, aluno sumido). Embaixo, quem precisa de atenção, com mensagens prontas no WhatsApp, e quem está mandando bem.", href: "/personal", go: "Abrir Painel" },
+      { q: "O que a tela Início mostra?", a: "No topo, o próximo passo mais importante (cobrança atrasada, aula de hoje, aluno sumido). Embaixo, quem precisa de atenção, com mensagens prontas no WhatsApp, e quem está mandando bem.", href: "/personal", go: "Abrir Painel" },
+      { q: "Treino também. Como uso o app como aluno?", a: "Em Perfil → Usar como aluno, o app vira o seu app de treino. Pra voltar, vá em Perfil → Ir pra área do personal. Quando você entra como \"Sou personal\", o app sempre abre na sua área.", href: "/personal/perfil", go: "Abrir meu perfil" },
     ],
   },
   {
@@ -77,8 +78,8 @@ const PERSONAL: Section[] = [
     items: [
       { q: "Como cobro meus alunos?", a: "Na aba Financeiro do aluno, defina mensalidade e dia do vencimento. O Carga cria a cobrança 5 dias antes e avisa o aluno. O Pix cai direto na sua chave, sem passar pelo Carga. Dá pra mandar o Pix no WhatsApp e marcar como paga.", href: "/personal/cobrancas", go: "Abrir Cobranças" },
       { q: "Como marco aulas?", a: "Em Agenda, toque em + e escolha aluno, dia e horário. O aluno recebe aviso no celular.", href: "/personal/agenda", go: "Abrir Agenda" },
-      { q: "Dá pra colocar minha logo e minha cor?", a: "Sim. Em Meu perfil → Sua marca, escolha a cor e envie a logo. Seus alunos passam a ver o app com a sua cor e a sua logo, e os PDFs saem com a sua marca.", href: "/personal/perfil", go: "Abrir meu perfil" },
-      { q: "Onde estão desafios e relatórios?", a: "No botão Mais, no menu da área do personal. Desafios fazem um ranking entre seus alunos; Relatórios geram o PDF do mês de cada um com seu nome e CREF." },
+      { q: "Dá pra colocar minha logo e minha cor?", a: "Sim. Em Perfil → Sua marca, escolha a cor e envie a logo. Seus alunos passam a ver o app com a sua cor e a sua logo, e os PDFs saem com a sua marca.", href: "/personal/perfil", go: "Abrir meu perfil" },
+      { q: "Onde estão desafios e relatórios?", a: "Na tela Início, em Ferramentas. Desafios fazem um ranking entre seus alunos; Relatórios geram o PDF do mês de cada um com seu nome e CREF." },
     ],
   },
 ];
@@ -93,7 +94,7 @@ export default function HelpPage() {
 
   return (
     <>
-      <Header title="Como usar" back={{ href: who === "personal" ? "/personal" : "/perfil", label: who === "personal" ? "Painel" : "Perfil" }} />
+      <Header title="Como usar" back={{ href: who === "personal" ? "/personal" : "/perfil", label: who === "personal" ? "Início" : "Perfil" }} />
       <div className="px-5 pt-2">
         <Segmented<"aluno" | "personal">
           value={who}

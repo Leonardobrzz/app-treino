@@ -6,6 +6,7 @@ import { useEffect, type ReactNode, type ButtonHTMLAttributes, type InputHTMLAtt
 
 const PATHS = {
   home: "M4 5h16v15H4zM4 10h16M9 3v4M15 3v4",
+  house: "M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5",
   dumbbell: "M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12",
   chart: "M3 17l6-6 4 4 8-8M15 7h6v6",
   user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6",

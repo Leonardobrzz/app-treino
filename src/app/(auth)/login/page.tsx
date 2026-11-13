@@ -45,11 +45,6 @@ function Login() {
     if (perfil === "personal") {
       const { data: p } = await sb.from("profiles").select("is_trainer").eq("id", data.user.id).maybeSingle();
       dest = p?.is_trainer ? "/personal" : "/personal/comecar";
-      try {
-        sessionStorage.setItem("abriu", "1");
-      } catch {
-        /* sem storage */
-      }
     }
     router.replace(dest);
     router.refresh();
