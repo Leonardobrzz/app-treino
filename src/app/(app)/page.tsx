@@ -47,6 +47,17 @@ export default function TodayPage() {
         supabase().from("water_logs").select("ml").eq("logged_on", todayISO()),
         supabase().from("body_weights").select("weight").order("measured_on", { ascending: false }).limit(1).maybeSingle(),
       ]);
+      // Personal que entrou como "Sou personal": abre direto na área dele (uma vez por sessão,
+      // pra ainda conseguir usar o lado aluno pela barra de baixo).
+      try {
+        if (p?.is_trainer && localStorage.getItem("perfil") === "personal" && !sessionStorage.getItem("abriu")) {
+          sessionStorage.setItem("abriu", "1");
+          router.replace("/personal");
+          return;
+        }
+      } catch {
+        /* sem storage */
+      }
       if (p && !p.onboarded_at) {
         router.replace("/bem-vindo");
         return;

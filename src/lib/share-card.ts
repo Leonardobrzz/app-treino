@@ -40,6 +40,9 @@ function drawLogo(ctx: CanvasRenderingContext2D, x: number, y: number, size: num
   }
 }
 
+/** Endereço mostrado na imagem (em teste local, mostra o do app publicado) */
+const siteHost = () => (/^(localhost|127\.|192\.168\.)/.test(location.host) ? "carga.app.br" : location.host);
+
 const W = 1080;
 const H = 1920;
 
@@ -186,7 +189,7 @@ export async function drawWorkoutCard(d: CardData): Promise<Blob> {
   ctx.fillText("Registrado no Carga — treino, carga e evolução", pad, H - 150);
   ctx.fillStyle = "#FF9500";
   ctx.font = `700 40px ${family}`;
-  ctx.fillText(location.host, pad, H - 95);
+  ctx.fillText(siteHost(), pad, H - 95);
 
   return await new Promise<Blob>((res) => c.toBlob((b) => res(b!), "image/png"));
 }
@@ -303,8 +306,9 @@ export async function drawPhotoStory(d: CardData, photo: Blob): Promise<Blob> {
   ctx.fillText([d.dateLabel, d.time].filter(Boolean).join("  ·  "), pad, dateY);
 
   // números com ícones
+  const exN = d.exerciseCount ?? d.exercises?.length ?? 0;
   const items: [string, string][] = [
-    ["check", ((n) => `${n} ${n === 1 ? "exercício" : "exercícios"}`)(d.exerciseCount ?? d.exercises?.length ?? 0)],
+    ...(exN > 0 ? ([["check", `${exN} ${exN === 1 ? "exercício" : "exercícios"}`]] as [string, string][]) : []),
     ["clock", durationLabel(d.minutes)],
     ...(d.monthCount ? ([["flame", `${d.monthCount}º no mês`]] as [string, string][]) : []),
   ];
@@ -349,7 +353,7 @@ export async function drawPhotoStory(d: CardData, photo: Blob): Promise<Blob> {
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.font = `600 36px ${family}`;
   ctx.textAlign = "right";
-  ctx.fillText(location.host, W - pad, 176);
+  ctx.fillText(siteHost(), W - pad, 176);
   ctx.textAlign = "left";
 
   return await new Promise<Blob>((res) => c.toBlob((b) => res(b!), "image/jpeg", 0.92));
